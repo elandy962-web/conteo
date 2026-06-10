@@ -2,16 +2,15 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema de Conteo PWA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Conteo VIP</title>
 
 <meta name="theme-color" content="#1e3a8a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ConteoVIP">
 
-<link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Sistema%20de%20Conteo%20VIP%22,%22short_name%22:%22ConteoVIP%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230f172a%22,%22theme_color%22:%22%231e3a8a%22,%22orientation%22:%22portrait%22,%22icons%22:[{%22src%22:%22https://cdn.jsdelivr.net/npm/@tabler/icons@latest/icons/png/192x192/calculator.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22},{%22src%22:%22https://cdn.jsdelivr.net/npm/@tabler/icons@latest/icons/png/512x512/calculator.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22}]}">
-
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 
 <style>
@@ -27,18 +26,37 @@ body {
 }
 .app {
   width: 100%;
-  max-width: 480px;
+  max-width: 420px; /* Ancho fijo óptimo para móviles */
   background: #ffffff;
   border-radius: 24px;
   padding: 20px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
 }
 
+/* Botón de Instalación PWA */
+#pwaInstallBtn {
+  background: #2563eb;
+  color: white;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 12px;
+  border: none;
+  display: none; /* Se activa dinámicamente si es instalable */
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  cursor: pointer;
+}
+
 /* Header */
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 20px;
 }
 .header-left h1 {
@@ -46,7 +64,6 @@ body {
   font-weight: 700;
   color: #1e293b;
   letter-spacing: -0.5px;
-  margin-bottom: 4px;
 }
 .fecha-badge {
   display: inline-flex;
@@ -58,13 +75,14 @@ body {
   border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
+  margin-top: 4px;
 }
 
 /* Configuración de la Lista */
 .meta-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 16px;
   background: #f8fafc;
   padding: 12px;
@@ -83,13 +101,14 @@ label {
 input {
   width: 100%;
   border: 2px solid #e2e8f0;
-  padding: 10px 12px;
+  padding: 10px;
   font-size: 14px;
   font-weight: 600;
   border-radius: 10px;
   color: #1e293b;
   outline: none;
   transition: border-color 0.2s;
+  background: #ffffff;
 }
 input:focus { border-color: #2563eb; }
 
@@ -119,20 +138,8 @@ input:focus { border-color: #2563eb; }
 .btn-primary:hover { background: #1d4ed8; }
 .btn-success { background: #059669; color: white; padding: 14px; font-size: 15px; width: 100%; margin-bottom: 16px; }
 .btn-success:hover { background: #047857; }
-.btn-danger { background: #f1f5f9; color: #64748b; width: 38px; height: 38px; border-radius: 12px; font-size: 18px; }
+.btn-danger { background: #f1f5f9; color: #64748b; width: 42px; height: 42px; border-radius: 12px; font-size: 18px; }
 .btn-danger:hover { background: #fee2e2; color: #ef4444; }
-
-/* Botón de Instalación */
-#pwaInstallBtn {
-  background: #3b82f6;
-  color: white;
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 16px;
-  font-size: 13px;
-  border-radius: 10px;
-  display: none; /* Se muestra solo si es instalable */
-}
 
 /* Estadísticas */
 .stats-grid {
@@ -172,32 +179,32 @@ input:focus { border-color: #2563eb; }
 .item-del { background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 16px; display: flex; }
 .item-del:hover { color: #ef4444; }
 
-/* Historial y Filtros de Rango */
+/* Historial y Filtros de Rango Corregidos */
 .range-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 12px;
 }
 .range-grid input {
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 8px 6px;
+  font-size: 12px;
 }
 .history-list { list-style: none; max-height: 250px; overflow-y: auto; padding-right: 2px; }
 .history-item {
   background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px;
   padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  gap: 8px;
 }
-.history-info { cursor: pointer; flex: 1; }
-.history-name { font-weight: 700; color: #1e293b; font-size: 14px; }
+.history-info { cursor: pointer; flex: 1; min-width: 0; }
+.history-name { font-weight: 700; color: #1e293b; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .history-meta { font-size: 12px; color: #64748b; margin-top: 2px; }
-.history-actions { display: flex; gap: 6px; }
-.btn-icon { width: 34px; height: 34px; border-radius: 8px; background: #f1f5f9; color: #475569; }
+.history-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.btn-icon { width: 36px; height: 36px; border-radius: 8px; background: #f1f5f9; color: #475569; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .btn-icon:hover { background: #e2e8f0; }
 .btn-pdf { background: #ffedd5; color: #ea580c; }
-.btn-pdf:hover { background: #fed7aa; color: #ea580c; }
-.btn-trash-hist { color: #94a3b8; }
+.btn-pdf:hover { background: #fed7aa; }
 .btn-trash-hist:hover { background: #fee2e2; color: #ef4444; }
 
 .empty { text-align: center; color: #94a3b8; font-size: 13px; padding: 20px 0; }
@@ -213,7 +220,7 @@ input:focus { border-color: #2563eb; }
 <body>
 
 <div class="app">
-  <button id="pwaInstallBtn" class="btn"><i class="ti ti-download"></i> Instalar Aplicación en Celular</button>
+  <button id="pwaInstallBtn"><i class="ti ti-download"></i> Instalar Conteo VIP</button>
 
   <div class="header">
     <div class="header-left">
@@ -278,7 +285,6 @@ input:focus { border-color: #2563eb; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-// Selectores del DOM
 const input = document.getElementById('numInput');
 const addBtn = document.getElementById('addBtn');
 const listEl = document.getElementById('list');
@@ -298,7 +304,6 @@ const pwaInstallBtn = document.getElementById('pwaInstallBtn');
 let currentItems = [];
 let dbHistorial = JSON.parse(localStorage.getItem('conteo_historial_v4')) || [];
 
-// Inicializar fechas de hoy
 const hoy = new Date().toISOString().split('T')[0];
 listFechaInput.value = hoy;
 filterFechaInicio.value = hoy;
@@ -316,7 +321,6 @@ function showToast(msg, icon = 'ti-check') {
   setTimeout(() => toastEl.classList.remove('show'), 2200);
 }
 
-// Renderizar la lista de trabajo actual
 function renderCurrentList() {
   listEl.innerHTML = '';
   if (currentItems.length === 0) {
@@ -362,7 +366,6 @@ clearBtn.addEventListener('click', () => {
   showToast('Lista actual vaciada', 'ti-refresh');
 });
 
-// Guardar lista en historial local
 saveBtn.addEventListener('click', () => {
   if (currentItems.length === 0) {
     showToast('La lista está vacía', 'ti-alert-circle');
@@ -389,13 +392,11 @@ saveBtn.addEventListener('click', () => {
   renderHistorial();
 });
 
-// BUSCADOR POR RANGO DE FECHAS (Filtrado Inteligente)
 function renderHistorial() {
   historyListEl.innerHTML = '';
   const inicio = filterFechaInicio.value;
   const fin = filterFechaFin.value;
   
-  // Filtrar listas que estén dentro del rango seleccionado inclusive
   const listasFiltradas = dbHistorial.filter(l => l.fecha >= inicio && l.fecha <= fin);
 
   if (listasFiltradas.length === 0) {
@@ -403,9 +404,7 @@ function renderHistorial() {
     return;
   }
 
-  // Ordenar de la más nueva a la más vieja
   listasFiltradas.sort((a, b) => b.id - a.id).forEach(lista => {
-    // Formatear fecha para mostrar de manera visual compacta (DD/MM/AAAA)
     const [yy, mm, dd] = lista.fecha.split('-');
     const fCorto = `${dd}/${mm}/${yy}`;
 
@@ -414,18 +413,17 @@ function renderHistorial() {
     li.innerHTML = `
       <div class="history-info" data-load-id="${lista.id}">
         <div class="history-name">${lista.nombre} <span style="font-size:11px; font-weight:normal; color:#94a3b8;">(${fCorto})</span></div>
-        <div class="history-meta">${lista.valores.length} registros • Total: <b>${fmt(lista.total)}</b></div>
+        <div class="history-meta">${lista.valores.length} reg • Tot: <b>${fmt(lista.total)}</b></div>
       </div>
       <div class="history-actions">
-        <button class="btn btn-icon btn-pdf" data-pdf-id="${lista.id}" title="Exportar PDF"><i class="ti ti-file-type-pdf"></i></button>
-        <button class="btn btn-icon btn-trash-hist" data-del-id="${lista.id}" title="Eliminar"><i class="ti ti-trash"></i></button>
+        <button class="btn-icon btn-pdf" data-pdf-id="${lista.id}" title="Exportar PDF"><i class="ti ti-file-type-pdf"></i></button>
+        <button class="btn-icon btn-trash-hist" data-del-id="${lista.id}" title="Eliminar"><i class="ti ti-trash"></i></button>
       </div>
     `;
     historyListEl.appendChild(li);
   });
 }
 
-// Delegación de eventos del historial
 historyListEl.addEventListener('click', e => {
   const loadBtn = e.target.closest('[data-load-id]');
   const pdfBtn = e.target.closest('[data-pdf-id]');
@@ -443,9 +441,7 @@ historyListEl.addEventListener('click', e => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
-  if (pdfBtn) {
-    exportarPDFEspecifico(+pdfBtn.dataset.pdfId);
-  }
+  if (pdfBtn) { exportarPDFEspecifico(+pdfBtn.dataset.pdfId); }
   if (delBtn) {
     const id = +delBtn.dataset.delId;
     if (confirm('¿Seguro que deseas eliminar esta lista del historial?')) {
@@ -545,12 +541,12 @@ function exportarPDFEspecifico(id) {
   showToast('PDF descargado', 'ti-file-type-pdf');
 }
 
-// LOGICA DE INSTALACIÓN (PWA)
+// LOGICA DE INSTALACIÓN PWA MEJORADA
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  pwaInstallBtn.style.display = 'block'; // Muestra el botón si el celular es compatible
+  pwaInstallBtn.style.display = 'flex'; // Mostrar botón en pantallas compatibles
 });
 
 pwaInstallBtn.addEventListener('click', async () => {
@@ -566,18 +562,18 @@ pwaInstallBtn.addEventListener('click', async () => {
 
 window.addEventListener('appinstalled', () => {
   pwaInstallBtn.style.display = 'none';
-  showToast('¡Aplicación instalada con éxito!');
+  showToast('¡Conteo VIP instalado con éxito!');
 });
 
-// Auto-registrar Service Worker virtual para habilitar la instalación sin archivos externos
+// Registro correcto del Service Worker físico
 if ('serviceWorker' in navigator) {
-  const swCode = `self.addEventListener('fetch', function(e) { /* SW para permitir PWA offline */ });`;
-  const blob = new Blob([swCode], { type: 'application/javascript' });
-  const swUrl = URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl).catch(err => console.log('SW error:', err));
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('Service Worker registrado con éxito', reg.scope))
+      .catch(err => console.error('Error al registrar Service Worker:', err));
+  });
 }
 
-// Inicialización
 renderCurrentList();
 renderHistorial();
 </script>
