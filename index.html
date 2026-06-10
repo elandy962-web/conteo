@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Conteo PWA</title>
+
+<meta name="theme-color" content="#1e3a8a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ConteoVIP">
+
+<link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Sistema%20de%20Conteo%20VIP%22,%22short_name%22:%22ConteoVIP%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230f172a%22,%22theme_color%22:%22%231e3a8a%22,%22orientation%22:%22portrait%22,%22icons%22:[{%22src%22:%22https://cdn.jsdelivr.net/npm/@tabler/icons@latest/icons/png/192x192/calculator.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22},{%22src%22:%22https://cdn.jsdelivr.net/npm/@tabler/icons@latest/icons/png/512x512/calculator.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22}]}">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+  min-height: 100vh;
+  padding: 16px 8px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+.app {
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+.header-left h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+.fecha-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Configuración de la Lista */
+.meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+}
+label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+input {
+  width: 100%;
+  border: 2px solid #e2e8f0;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 10px;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.2s;
+}
+input:focus { border-color: #2563eb; }
+
+/* Entrada de Números */
+.input-area { margin-bottom: 16px; }
+.input-row { display: flex; gap: 8px; }
+.input-row input {
+  flex: 1;
+  font-size: 20px;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+/* Botones */
+.btn {
+  border: none;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+.btn-primary { background: #2563eb; color: white; padding: 0 16px; font-size: 15px; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-success { background: #059669; color: white; padding: 14px; font-size: 15px; width: 100%; margin-bottom: 16px; }
+.btn-success:hover { background: #047857; }
+.btn-danger { background: #f1f5f9; color: #64748b; width: 38px; height: 38px; border-radius: 12px; font-size: 18px; }
+.btn-danger:hover { background: #fee2e2; color: #ef4444; }
+
+/* Botón de Instalación */
+#pwaInstallBtn {
+  background: #3b82f6;
+  color: white;
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  border-radius: 10px;
+  display: none; /* Se muestra solo si es instalable */
+}
+
+/* Estadísticas */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stat {
+  border-radius: 14px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+}
+.stat-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px; }
+.stat-val { font-size: 20px; font-weight: 700; color: #334155; }
+.stat-val.total { color: #2563eb; }
+
+/* Listas Registradas */
+.section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 4px;
+}
+.list { list-style: none; max-height: 180px; overflow-y: auto; margin-bottom: 20px; padding-right: 2px; }
+.item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px; background: #f8fafc; border-radius: 10px; margin-bottom: 6px;
+  border: 1px solid #e2e8f0; font-size: 15px;
+}
+.item-val { font-weight: 600; color: #1e293b; }
+.item-del { background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 16px; display: flex; }
+.item-del:hover { color: #ef4444; }
+
+/* Historial y Filtros de Rango */
+.range-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.range-grid input {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.history-list { list-style: none; max-height: 250px; overflow-y: auto; padding-right: 2px; }
+.history-item {
+  background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px;
+  padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+.history-info { cursor: pointer; flex: 1; }
+.history-name { font-weight: 700; color: #1e293b; font-size: 14px; }
+.history-meta { font-size: 12px; color: #64748b; margin-top: 2px; }
+.history-actions { display: flex; gap: 6px; }
+.btn-icon { width: 34px; height: 34px; border-radius: 8px; background: #f1f5f9; color: #475569; }
+.btn-icon:hover { background: #e2e8f0; }
+.btn-pdf { background: #ffedd5; color: #ea580c; }
+.btn-pdf:hover { background: #fed7aa; color: #ea580c; }
+.btn-trash-hist { color: #94a3b8; }
+.btn-trash-hist:hover { background: #fee2e2; color: #ef4444; }
+
+.empty { text-align: center; color: #94a3b8; font-size: 13px; padding: 20px 0; }
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px);
+  background: #1e293b; color: white; padding: 12px 24px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+  transition: transform 0.3s ease; z-index: 100; display: flex; align-items: center; gap: 8px;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <button id="pwaInstallBtn" class="btn"><i class="ti ti-download"></i> Instalar Aplicación en Celular</button>
+
+  <div class="header">
+    <div class="header-left">
+      <h1>Conteo VIP</h1>
+      <span class="fecha-badge"><i class="ti ti-calendar"></i> <span id="fechaLabel"></span></span>
+    </div>
+    <button class="btn btn-danger" id="clearBtn" title="Limpiar lista actual"><i class="ti ti-trash"></i></button>
+  </div>
+
+  <div class="meta-grid">
+    <div>
+      <label for="listFecha">Fecha de Lista</label>
+      <input type="date" id="listFecha" />
+    </div>
+    <div>
+      <label for="listName">Nombre de Lista</label>
+      <input type="text" id="listName" placeholder="Ej: Softball" value="Mi Lista" />
+    </div>
+  </div>
+
+  <div class="input-area">
+    <label for="numInput">Número a agregar</label>
+    <div class="input-row">
+      <input type="number" id="numInput" placeholder="0.00" step="any" inputmode="decimal" autocomplete="off" />
+      <button class="btn btn-primary" id="addBtn"><i class="ti ti-plus"></i> Añadir</button>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat">
+      <div class="stat-label">Total Acumulado</div>
+      <div class="stat-val total" id="totalVal">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Cantidad</div>
+      <div class="stat-val" id="countVal">0</div>
+    </div>
+  </div>
+
+  <button class="btn btn-success" id="saveBtn"><i class="ti ti-device-floppy"></i> Guardar esta Lista</button>
+
+  <div class="section-title">Números en la lista actual</div>
+  <ul class="list" id="list">
+    <li class="empty">Agrega números para comenzar.</li>
+  </ul>
+
+  <div class="section-title">Historial por Rango de Fechas</div>
+  <div class="range-grid">
+    <div>
+      <label for="filterFechaInicio">Desde:</label>
+      <input type="date" id="filterFechaInicio" />
+    </div>
+    <div>
+      <label for="filterFechaFin">Hasta:</label>
+      <input type="date" id="filterFechaFin" />
+    </div>
+  </div>
+  <ul class="history-list" id="historyList"></ul>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// Selectores del DOM
+const input = document.getElementById('numInput');
+const addBtn = document.getElementById('addBtn');
+const listEl = document.getElementById('list');
+const totalEl = document.getElementById('totalVal');
+const countEl = document.getElementById('countVal');
+const clearBtn = document.getElementById('clearBtn');
+const saveBtn = document.getElementById('saveBtn');
+const listFechaInput = document.getElementById('listFecha');
+const listNameInput = document.getElementById('listName');
+const filterFechaInicio = document.getElementById('filterFechaInicio');
+const filterFechaFin = document.getElementById('filterFechaFin');
+const historyListEl = document.getElementById('historyList');
+const toastEl = document.getElementById('toast');
+const fechaLabel = document.getElementById('fechaLabel');
+const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+
+let currentItems = [];
+let dbHistorial = JSON.parse(localStorage.getItem('conteo_historial_v4')) || [];
+
+// Inicializar fechas de hoy
+const hoy = new Date().toISOString().split('T')[0];
+listFechaInput.value = hoy;
+filterFechaInicio.value = hoy;
+filterFechaFin.value = hoy;
+
+const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+const fechaStr = new Date().toLocaleDateString('es-DO', options);
+fechaLabel.textContent = fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1);
+
+function fmt(n) { return n % 1 === 0 ? n.toString() : parseFloat(n.toFixed(4)).toString(); }
+
+function showToast(msg, icon = 'ti-check') {
+  toastEl.innerHTML = `<i class="ti ${icon}"></i> ${msg}`;
+  toastEl.classList.add('show');
+  setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+// Renderizar la lista de trabajo actual
+function renderCurrentList() {
+  listEl.innerHTML = '';
+  if (currentItems.length === 0) {
+    listEl.innerHTML = `<li class="empty">Agrega números para comenzar.</li>`;
+    totalEl.textContent = '0';
+    countEl.textContent = '0';
+    return;
+  }
+  const total = currentItems.reduce((a, b) => a + b, 0);
+  totalEl.textContent = fmt(parseFloat(total.toFixed(4)));
+  countEl.textContent = currentItems.length;
+
+  currentItems.forEach((val, i) => {
+    const li = document.createElement('li');
+    li.className = 'item';
+    li.innerHTML = `
+      <span class="item-val">#${currentItems.length - i} &nbsp;&nbsp; ${fmt(val)}</span>
+      <button class="item-del" data-i="${i}"><i class="ti ti-x"></i></button>
+    `;
+    listEl.appendChild(li);
+  });
+}
+
+function addNumber() {
+  const val = parseFloat(input.value);
+  if (isNaN(val)) { input.focus(); return; }
+  currentItems.unshift(val);
+  renderCurrentList();
+  input.value = '';
+  input.focus();
+}
+
+addBtn.addEventListener('click', addNumber);
+input.addEventListener('keydown', e => { if (e.key === 'Enter') addNumber(); });
+listEl.addEventListener('click', e => {
+  const btn = e.target.closest('[data-i]');
+  if (btn) { currentItems.splice(+btn.dataset.i, 1); renderCurrentList(); }
+});
+
+clearBtn.addEventListener('click', () => {
+  currentItems = [];
+  renderCurrentList();
+  showToast('Lista actual vaciada', 'ti-refresh');
+});
+
+// Guardar lista en historial local
+saveBtn.addEventListener('click', () => {
+  if (currentItems.length === 0) {
+    showToast('La lista está vacía', 'ti-alert-circle');
+    return;
+  }
+  const nombre = listNameInput.value.trim() || 'Lista sin nombre';
+  const fecha = listFechaInput.value;
+
+  const nuevaLista = {
+    id: Date.now(),
+    nombre: nombre,
+    fecha: fecha,
+    valores: [...currentItems],
+    total: currentItems.reduce((a, b) => a + b, 0)
+  };
+
+  dbHistorial.push(nuevaLista);
+  localStorage.setItem('conteo_historial_v4', JSON.stringify(dbHistorial));
+  showToast('¡Lista guardada!', 'ti-device-floppy');
+  
+  currentItems = [];
+  listNameInput.value = "Mi Lista";
+  renderCurrentList();
+  renderHistorial();
+});
+
+// BUSCADOR POR RANGO DE FECHAS (Filtrado Inteligente)
+function renderHistorial() {
+  historyListEl.innerHTML = '';
+  const inicio = filterFechaInicio.value;
+  const fin = filterFechaFin.value;
+  
+  // Filtrar listas que estén dentro del rango seleccionado inclusive
+  const listasFiltradas = dbHistorial.filter(l => l.fecha >= inicio && l.fecha <= fin);
+
+  if (listasFiltradas.length === 0) {
+    historyListEl.innerHTML = `<li class="empty">No hay listas guardadas en este rango.</li>`;
+    return;
+  }
+
+  // Ordenar de la más nueva a la más vieja
+  listasFiltradas.sort((a, b) => b.id - a.id).forEach(lista => {
+    // Formatear fecha para mostrar de manera visual compacta (DD/MM/AAAA)
+    const [yy, mm, dd] = lista.fecha.split('-');
+    const fCorto = `${dd}/${mm}/${yy}`;
+
+    const li = document.createElement('li');
+    li.className = 'history-item';
+    li.innerHTML = `
+      <div class="history-info" data-load-id="${lista.id}">
+        <div class="history-name">${lista.nombre} <span style="font-size:11px; font-weight:normal; color:#94a3b8;">(${fCorto})</span></div>
+        <div class="history-meta">${lista.valores.length} registros • Total: <b>${fmt(lista.total)}</b></div>
+      </div>
+      <div class="history-actions">
+        <button class="btn btn-icon btn-pdf" data-pdf-id="${lista.id}" title="Exportar PDF"><i class="ti ti-file-type-pdf"></i></button>
+        <button class="btn btn-icon btn-trash-hist" data-del-id="${lista.id}" title="Eliminar"><i class="ti ti-trash"></i></button>
+      </div>
+    `;
+    historyListEl.appendChild(li);
+  });
+}
+
+// Delegación de eventos del historial
+historyListEl.addEventListener('click', e => {
+  const loadBtn = e.target.closest('[data-load-id]');
+  const pdfBtn = e.target.closest('[data-pdf-id]');
+  const delBtn = e.target.closest('[data-del-id]');
+
+  if (loadBtn && !pdfBtn && !delBtn) {
+    const id = +loadBtn.dataset.loadId;
+    const lista = dbHistorial.find(l => l.id === id);
+    if (lista) {
+      currentItems = [...lista.valores];
+      listNameInput.value = lista.nombre;
+      listFechaInput.value = lista.fecha;
+      renderCurrentList();
+      showToast('Lista cargada en el editor', 'ti-edit');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+  if (pdfBtn) {
+    exportarPDFEspecifico(+pdfBtn.dataset.pdfId);
+  }
+  if (delBtn) {
+    const id = +delBtn.dataset.delId;
+    if (confirm('¿Seguro que deseas eliminar esta lista del historial?')) {
+      dbHistorial = dbHistorial.filter(l => l.id !== id);
+      localStorage.setItem('conteo_historial_v4', JSON.stringify(dbHistorial));
+      renderHistorial();
+      showToast('Lista eliminada', 'ti-trash');
+    }
+  }
+});
+
+filterFechaInicio.addEventListener('change', renderHistorial);
+filterFechaFin.addEventListener('change', renderHistorial);
+
+function exportarPDFEspecifico(id) {
+  const lista = dbHistorial.find(l => l.id === id);
+  if (!lista) return;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, margin = 20, col = W - margin * 2;
+  let y = 20;
+
+  const [year, month, day] = lista.fecha.split('-');
+  const fObj = new Date(year, month - 1, day);
+  const fLegible = fObj.toLocaleDateString('es-DO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(24, 95, 165);
+  doc.text(`Reporte: ${lista.nombre}`, margin, y);
+  y += 8;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(120, 120, 120);
+  doc.text(`Fecha: ${fLegible.charAt(0).toUpperCase() + fLegible.slice(1)}`, margin, y);
+  y += 8;
+
+  doc.setDrawColor(220, 220, 220);
+  doc.line(margin, y, W - margin, y);
+  y += 8;
+
+  doc.setFillColor(230, 241, 251);
+  doc.roundedRect(margin, y, col / 2 - 4, 16, 3, 3, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(24, 95, 165);
+  doc.text('Total acumulado', margin + 5, y + 6);
+  doc.setFontSize(13);
+  doc.text(fmt(parseFloat(lista.total.toFixed(4))), margin + 5, y + 13);
+
+  doc.setFillColor(241, 239, 232);
+  doc.roundedRect(margin + col / 2 + 4, y, col / 2 - 4, 16, 3, 3, 'F');
+  doc.setTextColor(80, 80, 80);
+  doc.setFontSize(11);
+  doc.text('Cantidad de registros', margin + col / 2 + 9, y + 6);
+  doc.setFontSize(13);
+  doc.text(lista.valores.length.toString(), margin + col / 2 + 9, y + 13);
+  y += 24;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(150, 150, 150);
+  doc.text('# Posición', margin, y);
+  doc.text('Valor', margin + 25, y);
+  y += 5;
+  doc.line(margin, y, W - margin, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  
+  [...lista.valores].reverse().forEach((val, i) => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    if (i % 2 === 0) {
+      doc.setFillColor(248, 248, 248);
+      doc.rect(margin, y - 4, col, 7, 'F');
+    }
+    doc.setTextColor(150, 150, 150);
+    doc.text((i + 1).toString(), margin + 2, y);
+    doc.setTextColor(30, 30, 30);
+    doc.text(fmt(val), margin + 25, y);
+    y += 7;
+  });
+
+  y += 4;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(margin, y, W - margin, y);
+  y += 6;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Gran Total:', margin, y);
+  doc.text(fmt(parseFloat(lista.total.toFixed(4))), margin + 25, y);
+
+  const cleanName = lista.nombre.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  doc.save(`conteo_${cleanName}_${lista.fecha}.pdf`);
+  showToast('PDF descargado', 'ti-file-type-pdf');
+}
+
+// LOGICA DE INSTALACIÓN (PWA)
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  pwaInstallBtn.style.display = 'block'; // Muestra el botón si el celular es compatible
+});
+
+pwaInstallBtn.addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      pwaInstallBtn.style.display = 'none';
+    }
+    deferredPrompt = null;
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  pwaInstallBtn.style.display = 'none';
+  showToast('¡Aplicación instalada con éxito!');
+});
+
+// Auto-registrar Service Worker virtual para habilitar la instalación sin archivos externos
+if ('serviceWorker' in navigator) {
+  const swCode = `self.addEventListener('fetch', function(e) { /* SW para permitir PWA offline */ });`;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(err => console.log('SW error:', err));
+}
+
+// Inicialización
+renderCurrentList();
+renderHistorial();
+</script>
+</body>
+</html>
