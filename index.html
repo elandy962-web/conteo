@@ -2,9 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="apple-web-app-capable" content="yes">
-  <meta name="apple-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-web-app-title" content="ConteoVIP">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ConteoVIP">
   <meta name="theme-color" content="#1e3a8a">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Conteo VIP</title>
@@ -563,7 +563,6 @@ function today() {
   return new Date().toISOString().slice(0,10);
 }
 
-// Para que los subtotales e ítems individuales muestren decimales si existen sin forzar ceros de más
 function formatNumber(n) {
   return n.toLocaleString('es', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
 }
@@ -793,15 +792,12 @@ async function captureAndOCR(showProgress) {
         $('progress-fill').style.width = (m.progress*100).toFixed(0) + '%';
       }
     },
-    // SE ACTUALIZÓ PARA INTEGRAR EL PUNTO Y LA COMA DECIMAL EN LA LISTA BLANCA DE CARACTERES
     tessedit_char_whitelist: '0123456789.,',
     tessedit_pageseg_mode: '7',
   });
 
-  // Reemplaza comas por puntos y elimina todo lo que no sea número o punto decimal
   let raw = result.data.text.replace(/,/g, '.').replace(/[^0-9.]/g, '').trim();
   
-  // Limpieza en caso de que queden múltiples puntos seguidos accidentalmente
   if ((raw.match(/\./g) || []).length > 1) {
     const parts = raw.split('.');
     raw = parts[0] + '.' + parts.slice(1).join('');
@@ -922,7 +918,7 @@ async function runScanLoop() {
             $('cam-status').textContent = `✅ +${raw} agregado (${conf.toFixed(0)}%)`;
 
             cooldownActive = true;
-            await sleep(2000); // 2 segundos de pausa para evitar lecturas duplicadas en movimiento
+            await sleep(2000); 
             cooldownActive = false;
             lastScannedNum = null; 
           }
@@ -979,7 +975,7 @@ $('btn-pdf-todo').addEventListener('click', () => {
 });
 
 // ══════════════════════════════════════════
-//  EXPORTAR PDF 
+//  EXPORTAR PDF (TIPO LISTA VERTICAL UNO BAJO EL OTRO)
 // ══════════════════════════════════════════
 function exportPDF(listas) {
   const PW = 794, PH = 1123;        
@@ -989,9 +985,10 @@ function exportPDF(listas) {
 
   const sorted = [...listas].sort((a,b) => b.id - a.id);
 
+  // Calcula la altura dinámica necesaria basado en una lista vertical pura (uno abajo del otro)
   function listHeight(lista) {
-    const rows = Math.ceil(lista.numeros.length / 5);
-    return 36 + 24 + rows * 28 + 20; 
+    const itemRows = lista.numeros.length;
+    return 36 + 24 + itemRows * 26 + 20; 
   }
   const HEADER_H = 110; 
   const FOOTER_H = 30;
@@ -1031,7 +1028,7 @@ function exportPDF(listas) {
 
       cx.fillStyle = '#93c5fd';
       cx.font = '16px Arial';
-      cx.fillText('Reporte de Historial', ML, 72);
+      cx.fillText('Reporte de Historial (Formato Lista)', ML, 72);
 
       const now = new Date();
       const fechaGen = now.toLocaleDateString('es', { day:'2-digit', month:'long', year:'numeric' });
@@ -1073,10 +1070,7 @@ function exportPDF(listas) {
     }
 
     pageListas.forEach((lista, idx) => {
-      const total    = lista.numeros.reduce((a,b)=>a+b,0);
-      const cols     = 5;
-      const colW     = CW / cols;
-      const rows     = Math.ceil(lista.numeros.length / cols);
+      const total = lista.numeros.reduce((a,b)=>a+b,0);
 
       cx.fillStyle = '#2563eb';
       roundRect(cx, ML, y, CW, 32, 6);
@@ -1097,20 +1091,28 @@ function exportPDF(listas) {
       cx.fillText(`Total: ${formatNumber(total)}   ·   Cantidad: ${lista.numeros.length}`, ML + 8, y + 15);
       y += 22;
 
+      // Renderizado en formato de lista pura (uno debajo del otro a ancho completo)
       for (let i = 0; i < lista.numeros.length; i++) {
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        const nx  = ML + col * colW;
-        const ny  = y + row * 28;
-        cx.fillStyle = i % 2 === 0 ? '#f1f5f9' : '#e2e8f0';
-        cx.fillRect(nx, ny, colW, 26);
+        const ny = y + i * 26;
+        
+        cx.fillStyle = i % 2 === 0 ? '#f8fafc' : '#f1f5f9';
+        cx.fillRect(ML, ny, CW, 24);
+        
+        cx.strokeStyle = '#e2e8f0';
+        cx.lineWidth = 0.5;
+        cx.strokeRect(ML, ny, CW, 24);
+
+        cx.fillStyle = '#64748b';
+        cx.font = 'bold 12px Arial';
+        cx.fillText(`#${i + 1}`, ML + 14, ny + 16);
+
         cx.fillStyle = '#0f172a';
-        cx.font = '13px Arial';
-        cx.textAlign = 'center';
-        cx.fillText(formatNumber(lista.numeros[i]), nx + colW/2, ny + 17);
+        cx.font = '14px Arial';
+        cx.textAlign = 'right';
+        cx.fillText(formatNumber(lista.numeros[i]), ML + CW - 18, ny + 16);
         cx.textAlign = 'left';
       }
-      y += rows * 28;
+      y += lista.numeros.length * 26;
 
       if (idx < pageListas.length - 1) {
         cx.strokeStyle = '#cbd5e1';
@@ -1139,6 +1141,7 @@ function exportPDF(listas) {
   const imgs = canvases.map(cv => cv.toDataURL('image/jpeg', 0.92));
   const fecha = new Date().toISOString().slice(0,10);
 
+  // Se añade estructura HTML con toolbar e inyección CSS dedicada para controlar la interfaz y la impresión limpia
   win.document.write(`<!DOCTYPE html>
 <html>
 <head>
@@ -1146,23 +1149,59 @@ function exportPDF(listas) {
   <title>ConteoVIP_${fecha}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#fff; }
-    .page { display:block; width:100%; page-break-after:always; }
+    body { background:#475569; font-family:system-ui, sans-serif; padding-top: 60px; }
+    
+    /* Toolbar Superior Fija */
+    .toolbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 60px;
+      background: #0f172a; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 24px; z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    .toolbar-title { color: #fff; font-size: 1rem; font-weight: 700; }
+    .toolbar-actions { display: flex; gap: 12px; }
+    .btn-action {
+      padding: 8px 16px; border: none; border-radius: 6px;
+      font-size: 0.85rem; font-weight: 700; cursor: pointer;
+      transition: opacity 0.15s; text-decoration: none; display: inline-flex; align-items: center;
+    }
+    .btn-print { background: #22c55e; color: #fff; }
+    .btn-close { background: #ef4444; color: #fff; }
+    .btn-action:hover { opacity: 0.9; }
+
+    .pdf-container { display: flex; flex-direction: column; align-items: center; padding: 20px 0; gap: 20px; }
+    .page { 
+      background:#fff; width: 794px; height: 1123px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: block;
+      page-break-after:always; 
+    }
     .page:last-child { page-break-after:avoid; }
     img { width:100%; display:block; }
+    
+    /* Reglas de Impresión Esenciales */
     @media print {
+      .toolbar { display: none !important; }
+      body { background: #fff; padding-top: 0; }
+      .pdf-container { padding: 0; gap: 0; }
+      .page { box-shadow: none; width: 100%; height: auto; }
       @page { size:A4; margin:0; }
-      body { margin:0; }
     }
   </style>
 </head>
 <body>
-${imgs.map(src => `<div class="page"><img src="${src}"></div>`).join('\n')}
-<script>
-  window.onload = function() {
-    setTimeout(function(){ window.print(); }, 400);
-  };
-<\/script>
+
+  <div class="toolbar">
+    <div class="toolbar-title">📄 Vista Previa de Reporte (Lista Vertical)</div>
+    <div class="toolbar-actions">
+      <button class="btn-action btn-print" onclick="window.print()">🖨 Imprimir / Guardar</button>
+      <button class="btn-action btn-close" onclick="window.close()">✕ Salir</button>
+    </div>
+  </div>
+
+  <div class="pdf-container">
+    ${imgs.map(src => `<div class="page"><img src="${src}"></div>`).join('\n')}
+  </div>
+
 </body></html>`);
   win.document.close();
 }
