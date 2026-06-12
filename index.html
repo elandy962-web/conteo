@@ -461,7 +461,7 @@
 
     <label>Número a agregar</label>
     <div class="num-row">
-      <input type="number" id="input-numero" placeholder="0.00" min="0" step="any">
+      <input type="number" id="input-numero" placeholder="0" min="0">
       <button class="btn-camera" id="btn-open-cam" title="Leer con cámara">📷</button>
     </div>
 
@@ -563,10 +563,6 @@ function today() {
   return new Date().toISOString().slice(0,10);
 }
 
-function formatNumber(n) {
-  return n.toLocaleString('es', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
-}
-
 // ══════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════
@@ -591,7 +587,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 // ══════════════════════════════════════════
 function updateTotals() {
   const total = currentList.reduce((a,b) => a + b, 0);
-  $('display-total').textContent = formatNumber(total);
+  $('display-total').textContent = total.toLocaleString('es');
   $('display-count').textContent = currentList.length;
 }
 
@@ -603,7 +599,7 @@ function renderList() {
   }
   ul.innerHTML = currentList.map((n,i) => `
     <li>
-      <span><strong>#${i+1}</strong> — ${formatNumber(n)}</span>
+      <span><strong>#${i+1}</strong> — ${n.toLocaleString('es')}</span>
       <button class="del-btn" data-i="${i}">🗑</button>
     </li>
   `).join('');
@@ -617,9 +613,7 @@ function renderList() {
 }
 
 $('btn-add').addEventListener('click', () => {
-  const rawVal = $('input-numero').value.trim().replace(',', '.');
-  if (rawVal === '') { alert('Ingresa un número válido.'); return; }
-  const val = parseFloat(rawVal);
+  const val = parseFloat($('input-numero').value);
   if (isNaN(val)) { alert('Ingresa un número válido.'); return; }
   currentList.push(val);
   $('input-numero').value = '';
@@ -663,11 +657,11 @@ function renderHistorial(listas) {
           <div class="hist-name">${l.nombre}</div>
           <div class="hist-meta">${formatDate(l.fecha)} · ${l.numeros.length} números</div>
         </div>
-        <div class="hist-total">${formatNumber(total)}</div>
+        <div class="hist-total">${total.toLocaleString('es')}</div>
       </div>
       <div class="hist-body" id="hb-${l.id}">
         <div class="hist-nums">
-          ${l.numeros.map(n => `<span class="hist-chip">${formatNumber(n)}</span>`).join('')}
+          ${l.numeros.map(n => `<span class="hist-chip">${n.toLocaleString('es')}</span>`).join('')}
         </div>
         <div class="hist-btn-row">
           <button class="hist-pdf-btn" data-id="${l.id}">📄 PDF</button>
@@ -792,17 +786,11 @@ async function captureAndOCR(showProgress) {
         $('progress-fill').style.width = (m.progress*100).toFixed(0) + '%';
       }
     },
-    tessedit_char_whitelist: '0123456789.,',
+    tessedit_char_whitelist: '0123456789',
     tessedit_pageseg_mode: '7',
   });
 
-  let raw = result.data.text.replace(/,/g, '.').replace(/[^0-9.]/g, '').trim();
-  
-  if ((raw.match(/\./g) || []).length > 1) {
-    const parts = raw.split('.');
-    raw = parts[0] + '.' + parts.slice(1).join('');
-  }
-  
+  const raw  = result.data.text.replace(/\D/g, '').trim();
   const conf = result.data.confidence;
   return { raw, conf };
 }
@@ -824,7 +812,7 @@ $('cam-btn-read').addEventListener('click', async () => {
 
   try {
     const { raw, conf } = await captureAndOCR(true);
-    if (raw && !isNaN(parseFloat(raw))) {
+    if (raw) {
       lastDetected = raw;
       $('cam-detected').textContent = raw;
       $('cam-status').textContent = `✅ Detectado con ${conf.toFixed(0)}% de confianza.`;
@@ -900,7 +888,7 @@ async function runScanLoop() {
     try {
       const { raw, conf } = await captureAndOCR(false);
 
-      if (raw && conf > 65 && !isNaN(parseFloat(raw))) {
+      if (raw && conf > 60) {
         if (raw !== lastScannedNum) {
           lastScannedNum = raw;
           lastDetected = raw;
@@ -918,7 +906,7 @@ async function runScanLoop() {
             $('cam-status').textContent = `✅ +${raw} agregado (${conf.toFixed(0)}%)`;
 
             cooldownActive = true;
-            await sleep(2000); 
+            await sleep(1800);
             cooldownActive = false;
             lastScannedNum = null; 
           }
@@ -928,7 +916,7 @@ async function runScanLoop() {
         }
       } else {
         if (raw) {
-          $('cam-status').textContent = `Analizando o confianza baja (${conf.toFixed(0)}%)…`;
+          $('cam-status').textContent = `Confianza baja (${conf.toFixed(0)}%), reintentando…`;
         } else {
           $('cam-status').textContent = 'Buscando número…';
         }
@@ -975,28 +963,33 @@ $('btn-pdf-todo').addEventListener('click', () => {
 });
 
 // ══════════════════════════════════════════
-//  EXPORTAR PDF (TIPO LISTA VERTICAL UNO BAJO EL OTRO)
+//  EXPORTAR PDF  (LISTA VERTICAL PURA EN UNA SOLA PÁGINA)
 // ══════════════════════════════════════════
 function exportPDF(listas) {
-  const PW = 794, PH = 1123;        
+  const PW = 794, PH = 1123; 
   const ML = 40, MR = 40;
   const CW = PW - ML - MR;
-  const PAGE_BOTTOM = PH - 40;
+  const PAGE_BOTTOM = PH - 35; 
 
   const sorted = [...listas].sort((a,b) => b.id - a.id);
 
-  // Calcula la altura dinámica necesaria basado en una lista vertical pura (uno abajo del otro)
+  // Calcula la altura dinámica exacta para filas verticales apiladas una debajo de otra
   function listHeight(lista) {
     const itemRows = lista.numeros.length;
-    return 36 + 24 + itemRows * 26 + 20; 
+    return 32 + 22 + (itemRows * 26); 
   }
-  const HEADER_H = 110; 
+  
+  const HEADER_H = 145; 
   const FOOTER_H = 30;
 
+  // Organizar páginas compactas
   const pages = [[]];
   let usedY = HEADER_H;
-  sorted.forEach(lista => {
-    const h = listHeight(lista);
+  
+  sorted.forEach((lista, index) => {
+    let h = listHeight(lista);
+    if (index < sorted.length - 1) h += 15; 
+
     if (usedY + h > PAGE_BOTTOM - FOOTER_H && pages[pages.length-1].length > 0) {
       pages.push([]);
       usedY = 50; 
@@ -1018,48 +1011,51 @@ function exportPDF(listas) {
     cx.fillStyle = '#ffffff';
     cx.fillRect(0, 0, PW, PH);
 
+    // ── HEADER ──
     if (pageIdx === 0) {
       cx.fillStyle = '#1e3a8a';
-      cx.fillRect(0, 0, PW, 90);
+      cx.fillRect(0, 0, PW, 85);
 
       cx.fillStyle = '#ffffff';
-      cx.font = 'bold 36px Arial';
-      cx.fillText('Conteo VIP', ML, 50);
+      cx.font = 'bold 32px Arial';
+      cx.fillText('Conteo VIP', ML, 48);
 
       cx.fillStyle = '#93c5fd';
-      cx.font = '16px Arial';
-      cx.fillText('Reporte de Historial (Formato Lista)', ML, 72);
+      cx.font = '14px Arial';
+      cx.fillText('Reporte de Historial (Lista Vertical)', ML, 68);
 
       const now = new Date();
       const fechaGen = now.toLocaleDateString('es', { day:'2-digit', month:'long', year:'numeric' });
       cx.fillStyle = '#bfdbfe';
-      cx.font = '13px Arial';
+      cx.font = '12px Arial';
       cx.textAlign = 'right';
-      cx.fillText('Generado: ' + fechaGen, PW - MR, 72);
+      cx.fillText('Generado: ' + fechaGen, PW - MR, 68);
       cx.textAlign = 'left';
 
       const totalGlobal = sorted.reduce((a,l) => a + l.numeros.reduce((x,n)=>x+n,0), 0);
       const cantGlobal  = sorted.reduce((a,l) => a + l.numeros.length, 0);
 
+      // Resumen acumulado
       cx.fillStyle = '#1e40af';
-      roundRect(cx, ML, 96, CW/2 - 8, 44, 6);
+      roundRect(cx, ML, 96, CW/2 - 8, 40, 6);
       cx.fillStyle = '#93c5fd';
-      cx.font = '11px Arial';
-      cx.fillText('TOTAL ACUMULADO', ML + 10, 116);
+      cx.font = '10px Arial';
+      cx.fillText('TOTAL ACUMULADO', ML + 10, 112);
       cx.fillStyle = '#ffffff';
-      cx.font = 'bold 22px Arial';
-      cx.fillText(formatNumber(totalGlobal), ML + 10, 136);
+      cx.font = 'bold 18px Arial';
+      cx.fillText(totalGlobal.toLocaleString('es'), ML + 10, 130);
 
+      // Resumen cantidad
       cx.fillStyle = '#1e40af';
-      roundRect(cx, ML + CW/2 + 8, 96, CW/2 - 8, 44, 6);
+      roundRect(cx, ML + CW/2 + 8, 96, CW/2 - 8, 40, 6);
       cx.fillStyle = '#93c5fd';
-      cx.font = '11px Arial';
-      cx.fillText('CANTIDAD DE NÚMEROS', ML + CW/2 + 18, 116);
+      cx.font = '10px Arial';
+      cx.fillText('CANTIDAD DE NÚMEROS', ML + CW/2 + 18, 112);
       cx.fillStyle = '#ffffff';
-      cx.font = 'bold 22px Arial';
-      cx.fillText(cantGlobal.toString(), ML + CW/2 + 18, 136);
+      cx.font = 'bold 18px Arial';
+      cx.fillText(cantGlobal.toString(), ML + CW/2 + 18, 130);
 
-      var y = 160;
+      var y = 155;
     } else {
       cx.fillStyle = '#1e3a8a';
       cx.fillRect(0, 0, PW, 34);
@@ -1069,31 +1065,34 @@ function exportPDF(listas) {
       var y = 50;
     }
 
+    // ── RENDERIZADO VERTICAL DE LISTAS ──
     pageListas.forEach((lista, idx) => {
       const total = lista.numeros.reduce((a,b)=>a+b,0);
 
+      // Cabecera lista
       cx.fillStyle = '#2563eb';
       roundRect(cx, ML, y, CW, 32, 6);
       cx.fillStyle = '#ffffff';
-      cx.font = 'bold 15px Arial';
-      cx.fillText(lista.nombre, ML + 10, y + 21);
+      cx.font = 'bold 14px Arial';
+      cx.fillText(lista.nombre, ML + 10, y + 20);
       cx.fillStyle = '#bfdbfe';
       cx.font = '12px Arial';
       cx.textAlign = 'right';
-      cx.fillText(formatDate(lista.fecha), PW - MR - 6, y + 21);
+      cx.fillText(formatDate(lista.fecha), PW - MR - 6, y + 20);
       cx.textAlign = 'left';
       y += 32;
 
+      // Subcabecera totales
       cx.fillStyle = '#f1f5f9';
       cx.fillRect(ML, y, CW, 22);
       cx.fillStyle = '#64748b';
-      cx.font = '12px Arial';
-      cx.fillText(`Total: ${formatNumber(total)}   ·   Cantidad: ${lista.numeros.length}`, ML + 8, y + 15);
+      cx.font = '11px Arial';
+      cx.fillText(`Total: ${total.toLocaleString('es')}   ·   Cantidad: ${lista.numeros.length}`, ML + 8, y + 15);
       y += 22;
 
-      // Renderizado en formato de lista pura (uno debajo del otro a ancho completo)
+      // Filas completas: un número debajo de otro
       for (let i = 0; i < lista.numeros.length; i++) {
-        const ny = y + i * 26;
+        const ny = y + (i * 26);
         
         cx.fillStyle = i % 2 === 0 ? '#f8fafc' : '#f1f5f9';
         cx.fillRect(ML, ny, CW, 24);
@@ -1109,7 +1108,7 @@ function exportPDF(listas) {
         cx.fillStyle = '#0f172a';
         cx.font = '14px Arial';
         cx.textAlign = 'right';
-        cx.fillText(formatNumber(lista.numeros[i]), ML + CW - 18, ny + 16);
+        cx.fillText(lista.numeros[i].toLocaleString('es'), ML + CW - 18, ny + 16);
         cx.textAlign = 'left';
       }
       y += lista.numeros.length * 26;
@@ -1118,30 +1117,30 @@ function exportPDF(listas) {
         cx.strokeStyle = '#cbd5e1';
         cx.lineWidth = 1;
         cx.beginPath();
-        cx.moveTo(ML, y + 8);
-        cx.lineTo(ML + CW, y + 8);
+        cx.moveTo(ML, y + 6);
+        cx.lineTo(ML + CW, y + 6);
         cx.stroke();
-        y += 20;
+        y += 14;
       }
     });
 
+    // ── FOOTER SEGURO ──
     cx.fillStyle = '#1e3a8a';
-    cx.fillRect(0, PH - 30, PW, 30);
+    cx.fillRect(0, PH - 26, PW, 26);
     cx.fillStyle = '#ffffff';
-    cx.font = '12px Arial';
-    cx.fillText('Conteo VIP', ML, PH - 10);
+    cx.font = '11px Arial';
+    cx.fillText('Conteo VIP', ML, PH - 9);
     cx.textAlign = 'right';
-    cx.fillText(`Pág. ${pageIdx + 1} / ${totalPages}`, PW - MR, PH - 10);
+    cx.fillText(`Pág. ${pageIdx + 1} / ${totalPages}`, PW - MR, PH - 9);
     cx.textAlign = 'left';
   });
 
   const win = window.open('', '_blank');
   if (!win) { alert('Activa las ventanas emergentes para generar el PDF.'); return; }
 
-  const imgs = canvases.map(cv => cv.toDataURL('image/jpeg', 0.92));
+  const imgs = canvases.map(cv => cv.toDataURL('image/jpeg', 0.95));
   const fecha = new Date().toISOString().slice(0,10);
 
-  // Se añade estructura HTML con toolbar e inyección CSS dedicada para controlar la interfaz y la impresión limpia
   win.document.write(`<!DOCTYPE html>
 <html>
 <head>
@@ -1178,7 +1177,6 @@ function exportPDF(listas) {
     .page:last-child { page-break-after:avoid; }
     img { width:100%; display:block; }
     
-    /* Reglas de Impresión Esenciales */
     @media print {
       .toolbar { display: none !important; }
       body { background: #fff; padding-top: 0; }
