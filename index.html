@@ -174,7 +174,7 @@
       text-align: center;
     }
     .total-label { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 4px; }
-    .total-value { font-size: 2rem; font-weight: 800; color: var(--green); }
+    .total-value { font-size: 1.6rem; font-weight: 800; color: var(--green); word-break: break-all; }
     .total-value.blue { color: var(--blue-light); }
 
     /* ── Lista de números ── */
@@ -222,7 +222,7 @@
     }
     .hist-header .hist-name { font-weight: 700; font-size: .9rem; }
     .hist-header .hist-meta { font-size: .75rem; color: var(--muted); }
-    .hist-header .hist-total { color: var(--green); font-weight: 700; }
+    .hist-header .hist-total { color: var(--green); font-weight: 700; font-size: 1.1rem; }
     .hist-body { padding: 10px 14px; display: none; }
     .hist-body.open { display: block; }
     .hist-nums {
@@ -380,10 +380,11 @@
       gap: 12px;
     }
     .cam-result-num {
-      font-size: 2.2rem;
+      font-size: 1.8rem;
       font-weight: 800;
       color: #34d399;
       min-width: 80px;
+      word-break: break-all;
     }
     .cam-result-info { flex: 1; }
     .cam-status { font-size: .8rem; color: #94a3b8; margin-bottom: 4px; }
@@ -450,7 +451,7 @@
 
     <label>Número a agregar</label>
     <div class="num-row">
-      <input type="number" id="input-numero" placeholder="0" min="0">
+      <input type="number" id="input-numero" placeholder="0.00" step="any" min="0">
       <button class="btn-camera" id="btn-open-cam" title="Leer con cámara">📷</button>
     </div>
     <button class="btn btn-blue" id="btn-add">+ Añadir</button>
@@ -530,6 +531,10 @@ let lastDetected = null;
 
 const $ = id => document.getElementById(id);
 
+function formatNumber(num) {
+  return num.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+}
+
 function formatDate(d) {
   if (!d) return '—';
   const [y,m,dia] = d.split('-');
@@ -555,7 +560,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 function updateTotals() {
   const total = currentList.reduce((a,b) => a + b, 0);
-  $('display-total').textContent = total.toLocaleString('es');
+  $('display-total').textContent = formatNumber(total);
   $('display-count').textContent = currentList.length;
 }
 
@@ -567,7 +572,7 @@ function renderList() {
   }
   ul.innerHTML = currentList.map((n,i) => `
     <li>
-      <span><strong>#${i+1}</strong> — ${n.toLocaleString('es')}</span>
+      <span><strong>#${i+1}</strong> — ${formatNumber(n)}</span>
       <button class="del-btn" data-i="${i}">🗑</button>
     </li>
   `).join('');
@@ -622,11 +627,11 @@ function renderHistorial(listas) {
           <div class="hist-name">${l.nombre}</div>
           <div class="hist-meta">${formatDate(l.fecha)} · ${l.numeros.length} números</div>
         </div>
-        <div class="hist-total">${total.toLocaleString('es')}</div>
+        <div class="hist-total">${formatNumber(total)}</div>
       </div>
       <div class="hist-body" id="hb-${l.id}">
         <div class="hist-nums">
-          ${l.numeros.map(n => `<span class="hist-chip">${n.toLocaleString('es')}</span>`).join('')}
+          ${l.numeros.map(n => `<span class="hist-chip">${formatNumber(n)}</span>`).join('')}
         </div>
         <div class="hist-btn-row">
           <button class="hist-pdf-btn" data-id="${l.id}">📄 PDF</button>
@@ -685,11 +690,11 @@ const camVideo  = $('cam-video');
 const camCanvas = $('cam-canvas');
 const camCtx    = camCanvas.getContext('2d');
 
-let scannerMode    = false;   
+let scannerMode    = false;
 let scannerRunning = false;
 let scannerCount   = 0;
-let lastScannedNum = null;    
-let cooldownActive = false;   
+let lastScannedNum = null;
+let cooldownActive = false;
 
 async function openCam() {
   camModal.classList.add('open');
@@ -701,7 +706,7 @@ async function openCam() {
   lastDetected = null;
   lastScannedNum = null;
   scannerCount = 0;
-  setScannerMode(false); 
+  setScannerMode(false);
 
   try {
     camStream = await navigator.mediaDevices.getUserMedia({
@@ -749,11 +754,21 @@ async function captureAndOCR(showProgress) {
         $('progress-fill').style.width = (m.progress*100).toFixed(0) + '%';
       }
     },
-    tessedit_char_whitelist: '0123456789',
+    tessedit_char_whitelist: '0123456789.,',
     tessedit_pageseg_mode: '7',
   });
 
-  const raw  = result.data.text.replace(/\D/g, '').trim();
+  let processedText = result.data.text.replace(/,/g, '.').replace(/[^0-9.]/g, '').trim();
+  
+  if(processedText.endsWith('.')) processedText = processedText.slice(0, -1);
+  const dots = processedText.split('.').length - 1;
+  if(dots > 1) {
+    const parts = processedText.split('.');
+    const decimalPart = parts.pop();
+    processedText = parts.join('') + '.' + decimalPart;
+  }
+
+  const raw = processedText;
   const conf = result.data.confidence;
   return { raw, conf };
 }
@@ -775,15 +790,15 @@ $('cam-btn-read').addEventListener('click', async () => {
 
   try {
     const { raw, conf } = await captureAndOCR(true);
-    if (raw) {
+    if (raw && !isNaN(parseFloat(raw))) {
       lastDetected = raw;
-      $('cam-detected').textContent = raw;
+      $('cam-detected').textContent = formatNumber(parseFloat(raw));
       $('cam-status').textContent = `✅ Detectado con ${conf.toFixed(0)}% de confianza.`;
       $('cam-btn-use').style.display = 'block';
       flashSuccess();
     } else {
       $('cam-detected').textContent = '—';
-      $('cam-status').textContent = '⚠ No se detectó número. Intenta de nuevo.';
+      $('cam-status').textContent = '⚠ No se detectó un número válido. Intenta de nuevo.';
     }
   } catch(e) {
     $('cam-status').textContent = '❌ Error: ' + e.message;
@@ -851,7 +866,7 @@ async function runScanLoop() {
     try {
       const { raw, conf } = await captureAndOCR(false);
 
-      if (raw && conf > 60) {
+      if (raw && conf > 60 && !isNaN(parseFloat(raw))) {
         if (raw !== lastScannedNum) {
           lastScannedNum = raw;
           lastDetected = raw;
@@ -865,13 +880,13 @@ async function runScanLoop() {
             updateScanCounter();
             flashSuccess();
 
-            $('cam-detected').textContent = raw;
-            $('cam-status').textContent = `✅ +${raw} agregado (${conf.toFixed(0)}%)`;
+            $('cam-detected').textContent = formatNumber(val);
+            $('cam-status').textContent = `✅ +${formatNumber(val)} agregado (${conf.toFixed(0)}%)`;
 
             cooldownActive = true;
             await sleep(1800);
             cooldownActive = false;
-            lastScannedNum = null; 
+            lastScannedNum = null;
           }
         } else {
           $('cam-status').textContent = `Mismo número detectado, espera…`;
@@ -879,7 +894,7 @@ async function runScanLoop() {
         }
       } else {
         if (raw) {
-          $('cam-status').textContent = `Confianza baja (${conf.toFixed(0)}%), reintentando…`;
+          $('cam-status').textContent = `Confianza baja o inválido (${conf.toFixed(0)}%), reintentando…`;
         } else {
           $('cam-status').textContent = 'Buscando número…';
         }
@@ -917,174 +932,149 @@ $('btn-pdf-todo').addEventListener('click', () => {
 });
 
 // ══════════════════════════════════════════
-//  EXPORTAR PDF (LISTA VERTICAL ESTRICTA — NOMBRE: CONTEO)
+//  EXPORTAR PDF (LISTA VERTICAL ESTRICTA — CERO DESBORDE)
 // ══════════════════════════════════════════
 function exportPDF(listas) {
-  const PW = 794, PH = 1123; // Medidas A4 estándar a 96dpi
+  const PW = 794; 
   const ML = 45, MR = 45;
   const CW = PW - ML - MR;
-  const PAGE_BOTTOM = PH - 50; 
 
   const sorted = [...listas].sort((a,b) => b.id - a.id);
 
-  function getListaBlockHeight(lista) {
-    return 32 + 22 + (lista.numeros.length * 24) + 15; 
-  }
-
-  const pages = [[]];
-  let currentY = 160; 
-
-  sorted.forEach(lista => {
-    const blockH = getListaBlockHeight(lista);
-    
-    if (currentY + blockH > PAGE_BOTTOM && pages[pages.length - 1].length > 0) {
-      pages.push([]);
-      currentY = 60; 
-    }
-    pages[pages.length - 1].push(lista);
-    currentY += blockH;
+  // 1. Calcular la altura dinámica basada en un formato estrictamente vertical
+  let totalCalculatedHeight = 165; 
+  
+  sorted.forEach((lista, idx) => {
+    totalCalculatedHeight += 32; // Cabecera de lista
+    totalCalculatedHeight += 22; // Subcabecera informativa
+    totalCalculatedHeight += (lista.numeros.length * 24); // Fila vertical estricta por cada número
+    totalCalculatedHeight += 15; // Margen entre bloques
   });
+  
+  totalCalculatedHeight += 40; // Margen para el pie de página seguro
 
-  const totalPages = pages.length;
-  const canvases = [];
+  // Forzar un lienzo continuo que crezca dinámicamente y evite páginas en blanco extras
+  const PH = Math.max(1123, totalCalculatedHeight);
 
-  pages.forEach((pageListas, pageIdx) => {
-    const cv = document.createElement('canvas');
-    cv.width  = PW;
-    cv.height = PH;
-    const cx = cv.getContext('2d');
-    canvases.push(cv);
+  const cv = document.createElement('canvas');
+  cv.width  = PW;
+  cv.height = PH;
+  const cx = cv.getContext('2d');
 
+  cx.fillStyle = '#ffffff';
+  cx.fillRect(0, 0, PW, PH);
+
+  // ── RENDERIZAR ENCABEZADO ──
+  cx.fillStyle = '#1e3a8a';
+  cx.fillRect(0, 0, PW, 90);
+
+  cx.fillStyle = '#ffffff';
+  cx.font = 'bold 34px Arial';
+  cx.fillText('Conteo', ML, 52);
+
+  cx.fillStyle = '#93c5fd';
+  cx.font = '15px Arial';
+  cx.fillText('Reporte de Historial (Lista Vertical Estricta)', ML, 74);
+
+  const now = new Date();
+  const fechaGen = now.toLocaleDateString('es', { day:'2-digit', month:'long', year:'numeric' });
+  cx.fillStyle = '#bfdbfe';
+  cx.font = '13px Arial';
+  cx.textAlign = 'right';
+  cx.fillText('Generado: ' + fechaGen, PW - MR, 74);
+  cx.textAlign = 'left';
+
+  // Resumen Global
+  const totalGlobal = sorted.reduce((a,l) => a + l.numeros.reduce((x,n)=>x+n,0), 0);
+  const cantGlobal  = sorted.reduce((a,l) => a + l.numeros.length, 0);
+
+  cx.fillStyle = '#1e40af';
+  roundRect(cx, ML, 102, CW/2 - 8, 44, 6);
+  cx.fillStyle = '#93c5fd';
+  cx.font = '10px Arial';
+  cx.fillText('TOTAL ACUMULADO', ML + 12, 118);
+  cx.fillStyle = '#ffffff';
+  cx.font = 'bold 20px Arial';
+  cx.fillText(formatNumber(totalGlobal), ML + 12, 138);
+
+  cx.fillStyle = '#1e40af';
+  roundRect(cx, ML + CW/2 + 8, 102, CW/2 - 8, 44, 6);
+  cx.fillStyle = '#93c5fd';
+  cx.font = '10px Arial';
+  cx.fillText('CANTIDAD DE NÚMEROS', ML + CW/2 + 20, 118);
+  cx.fillStyle = '#ffffff';
+  cx.font = 'bold 20px Arial';
+  cx.fillText(cantGlobal.toString(), ML + CW/2 + 20, 138);
+
+  let y = 165;
+
+  // ── RENDERIZAR FILAS EN VERTICAL ESTRICTO ──
+  sorted.forEach((lista) => {
+    const total = lista.numeros.reduce((a,b)=>a+b,0);
+
+    // Cabecera de la lista
+    cx.fillStyle = '#2563eb';
+    roundRect(cx, ML, y, CW, 32, 5);
     cx.fillStyle = '#ffffff';
-    cx.fillRect(0, 0, PW, PH);
-
-    let y = 0;
-
-    // ── RENDERIZAR ENCABEZADOS DE HOJA ──
-    if (pageIdx === 0) {
-      // Banner Principal Azul
-      cx.fillStyle = '#1e3a8a';
-      cx.fillRect(0, 0, PW, 90);
-
-      cx.fillStyle = '#ffffff';
-      cx.font = 'bold 34px Arial';
-      cx.fillText('Conteo', ML, 52);
-
-      cx.fillStyle = '#93c5fd';
-      cx.font = '15px Arial';
-      cx.fillText('Reporte de Historial (Lista Vertical)', ML, 74);
-
-      const now = new Date();
-      const fechaGen = now.toLocaleDateString('es', { day:'2-digit', month:'long', year:'numeric' });
-      cx.fillStyle = '#bfdbfe';
-      cx.font = '13px Arial';
-      cx.textAlign = 'right';
-      cx.fillText('Generado: ' + fechaGen, PW - MR, 74);
-      cx.textAlign = 'left';
-
-      // Cajas de Totales Globales
-      const totalGlobal = sorted.reduce((a,l) => a + l.numeros.reduce((x,n)=>x+n,0), 0);
-      const cantGlobal  = sorted.reduce((a,l) => a + l.numeros.length, 0);
-
-      // Card Izquierda (Total Acumulado)
-      cx.fillStyle = '#1e40af';
-      roundRect(cx, ML, 102, CW/2 - 8, 44, 6);
-      cx.fillStyle = '#93c5fd';
-      cx.font = '10px Arial';
-      cx.fillText('TOTAL ACUMULADO', ML + 12, 118);
-      cx.fillStyle = '#ffffff';
-      cx.font = 'bold 20px Arial';
-      cx.fillText(totalGlobal.toLocaleString('es'), ML + 12, 138);
-
-      // Card Derecha (Cantidad de Ítems)
-      cx.fillStyle = '#1e40af';
-      roundRect(cx, ML + CW/2 + 8, 102, CW/2 - 8, 44, 6);
-      cx.fillStyle = '#93c5fd';
-      cx.font = '10px Arial';
-      cx.fillText('CANTIDAD DE NÚMEROS', ML + CW/2 + 20, 118);
-      cx.fillStyle = '#ffffff';
-      cx.font = 'bold 20px Arial';
-      cx.fillText(cantGlobal.toLocaleString('es'), ML + CW/2 + 20, 138);
-
-      y = 165;
-    } else {
-      // Mini Cabecera para páginas de continuación
-      cx.fillStyle = '#1e3a8a';
-      cx.fillRect(0, 0, PW, 40);
-      cx.fillStyle = '#ffffff';
-      cx.font = 'bold 14px Arial';
-      cx.fillText('Conteo – Continuación de Lista', ML, 25);
-      y = 60;
-    }
-
-    // ── RENDERIZAR FILAS EN VERTICAL ESTRICTO ──
-    pageListas.forEach((lista) => {
-      const total = lista.numeros.reduce((a,b)=>a+b,0);
-
-      // Cabecera Azul de la Lista
-      cx.fillStyle = '#2563eb';
-      roundRect(cx, ML, y, CW, 32, 5);
-      cx.fillStyle = '#ffffff';
-      cx.font = 'bold 14px Arial';
-      cx.fillText(lista.nombre, ML + 12, y + 21);
-      cx.fillStyle = '#bfdbfe';
-      cx.font = '12px Arial';
-      cx.textAlign = 'right';
-      cx.fillText(formatDate(lista.fecha), PW - MR - 12, y + 21);
-      cx.textAlign = 'left';
-      y += 32;
-
-      // Subcabecera informativa
-      cx.fillStyle = '#f8fafc';
-      cx.fillRect(ML, y, CW, 22);
-      cx.fillStyle = '#475569';
-      cx.font = '12px Arial';
-      cx.fillText(`Suma total de la lista: ${total.toLocaleString('es')}   ·   Cantidad: ${lista.numeros.length}`, ML + 12, y + 15);
-      
-      cx.strokeStyle = '#cbd5e1';
-      cx.lineWidth = 1;
-      cx.beginPath(); cx.moveTo(ML, y + 22); cx.lineTo(ML + CW, y + 22); cx.stroke();
-      y += 22;
-
-      // Renderizar números en lista secuencial uno debajo de otro
-      for (let i = 0; i < lista.numeros.length; i++) {
-        const ny = y + (i * 24);
-        
-        cx.fillStyle = i % 2 === 0 ? '#f1f5f9' : '#ffffff';
-        cx.fillRect(ML, ny, CW, 24);
-        
-        cx.strokeStyle = '#e2e8f0';
-        cx.lineWidth = 0.5;
-        cx.strokeRect(ML, ny, CW, 24);
-
-        cx.fillStyle = '#64748b';
-        cx.font = 'bold 12px Arial';
-        cx.fillText(`#${i + 1}`, ML + 16, ny + 16);
-
-        cx.fillStyle = '#0f172a';
-        cx.font = 'bold 14px Arial';
-        cx.textAlign = 'right';
-        cx.fillText(lista.numeros[i].toLocaleString('es'), ML + CW - 16, ny + 16);
-        cx.textAlign = 'left';
-      }
-      y += (lista.numeros.length * 24) + 15; 
-    });
-
-    // ── PIE DE HOJA FIJO ──
-    cx.fillStyle = '#1e3a8a';
-    cx.fillRect(0, PH - 32, PW, 32);
-    cx.fillStyle = '#ffffff';
-    cx.font = '11px Arial';
-    cx.fillText('Conteo App — Lista Vertical Oficial', ML, PH - 12);
+    cx.font = 'bold 14px Arial';
+    cx.fillText(lista.nombre, ML + 12, y + 21);
+    cx.fillStyle = '#bfdbfe';
+    cx.font = '12px Arial';
     cx.textAlign = 'right';
-    cx.fillText(`Página ${pageIdx + 1} de ${totalPages}`, PW - MR, PH - 12);
+    cx.fillText(formatDate(lista.fecha), PW - MR - 12, y + 21);
     cx.textAlign = 'left';
+    y += 32;
+
+    // Subcabecera informativa
+    cx.fillStyle = '#f8fafc';
+    cx.fillRect(ML, y, CW, 22);
+    cx.fillStyle = '#475569';
+    cx.font = '12px Arial';
+    cx.fillText(`Suma total: ${formatNumber(total)}   ·   Cantidad: ${lista.numeros.length}`, ML + 12, y + 15);
+    
+    cx.strokeStyle = '#cbd5e1';
+    cx.lineWidth = 1;
+    cx.beginPath(); cx.moveTo(ML, y + 22); cx.lineTo(ML + CW, y + 22); cx.stroke();
+    y += 22;
+
+    // Números uno debajo de otro estrictamente sin columnas horizontales
+    for (let i = 0; i < lista.numeros.length; i++) {
+      const ny = y + (i * 24);
+      
+      cx.fillStyle = i % 2 === 0 ? '#f1f5f9' : '#ffffff';
+      cx.fillRect(ML, ny, CW, 24);
+      
+      cx.strokeStyle = '#e2e8f0';
+      cx.lineWidth = 0.5;
+      cx.strokeRect(ML, ny, CW, 24);
+
+      cx.fillStyle = '#64748b';
+      cx.font = 'bold 12px Arial';
+      cx.fillText(`#${i + 1}`, ML + 16, ny + 16);
+
+      cx.fillStyle = '#0f172a';
+      cx.font = 'bold 14px Arial';
+      cx.textAlign = 'right';
+      cx.fillText(formatNumber(lista.numeros[i]), ML + CW - 16, ny + 16);
+      cx.textAlign = 'left';
+    }
+    y += (lista.numeros.length * 24) + 15; 
   });
+
+  // Pie de Página al final absoluto de la imagen continua
+  cx.fillStyle = '#1e3a8a';
+  cx.fillRect(0, PH - 32, PW, 32);
+  cx.fillStyle = '#ffffff';
+  cx.font = '11px Arial';
+  cx.fillText('Conteo App — Lista Vertical Oficial', ML, PH - 12);
+  cx.textAlign = 'right';
+  cx.fillText('Documento Completo', PW - MR, PH - 12);
+  cx.textAlign = 'left';
 
   const win = window.open('', '_blank');
-  if (!win) { alert('Activa las ventanas emergentes en tu navegador.'); return; }
+  if (!win) { alert('Activa las ventanas emergentes.'); return; }
 
-  const imgs = canvases.map(cv => cv.toDataURL('image/jpeg', 0.95));
+  const imgData = cv.toDataURL('image/jpeg', 0.98);
   const fecha = new Date().toISOString().slice(0,10);
 
   win.document.write(`<!DOCTYPE html>
@@ -1094,24 +1084,22 @@ function exportPDF(listas) {
   <title>Conteo_${fecha}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#fafafa; display: flex; flex-direction: column; align-items: center; }
-    .page { display:block; width:100%; max-width: 794px; background: #fff; page-break-after:always; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 10px; }
-    .page:last-child { page-break-after:avoid; margin-bottom: 0; }
-    img { width:100%; display:block; }
+    body { background:#ffffff; margin: 0; }
+    .page { display:block; width:100%; max-width: 100%; height: auto; page-break-after:avoid; page-break-inside: avoid; }
+    img { width:100%; height: auto; display:block; }
     @media print {
-      body { background: transparent; }
-      .page { box-shadow: none; margin-bottom: 0; }
-      @page { size:A4; margin:0; }
+      @page { size:A4 portrait; margin:0; }
+      body { margin:0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
 </head>
 <body>
-${imgs.map(src => `<div class=\"page\"><img src=\"${src}\"></div>`).join('\n')}
-<script>
-  window.onload = function() {
-    setTimeout(function(){ window.print(); }, 350);
-  };
-<\/script>
+  <div class="page"><img src="${imgData}"></div>
+  <script>
+    window.onload = function() {
+      setTimeout(function(){ window.print(); window.close(); }, 350);
+    };
+  <\/script>
 </body></html>`);
   win.document.close();
 }
@@ -1130,21 +1118,6 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
   ctx.fill();
 }
-
-// ═══ PWA ═══
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredPrompt = e;
-  $('btn-install').style.display = 'block';
-});
-$('btn-install').addEventListener('click', async () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  await deferredPrompt.userChoice;
-  deferredPrompt = null;
-  $('btn-install').style.display = 'none';
-});
 </script>
 </body>
 </html>
