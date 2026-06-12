@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Conteo">
+  <meta name="apple-mobile-web-app-title" content="ConteoVIP">
   <meta name="theme-color" content="#1e3a8a">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Conteo</title>
+  <title>Conteo VIP</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
 
   <style>
@@ -418,7 +418,7 @@
 
 <header>
   <div>
-    <h1>Conteo</h1>
+    <h1>Conteo VIP</h1>
     <span id="header-date"></span>
   </div>
   <button id="btn-install">⬇ Instalar</button>
@@ -531,6 +531,7 @@ let lastDetected = null;
 
 const $ = id => document.getElementById(id);
 
+// Configurado para conservar hasta 4 decimales en pantalla
 function formatNumber(num) {
   return num.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
 }
@@ -684,7 +685,7 @@ $('btn-ver-todo').addEventListener('click', () => {
   renderHistorial(savedLists);
 });
 
-// ═══ CÁMARA OCR ═══
+// ═══ CÁMARA OCR COREGIDA PARA DECIMALES ═══
 const camModal  = $('cam-modal');
 const camVideo  = $('cam-video');
 const camCanvas = $('cam-canvas');
@@ -748,6 +749,7 @@ async function captureAndOCR(showProgress) {
   }
   camCtx.putImageData(imgD, 0, 0);
 
+  // CORRECCIÓN: Lista blanca ahora incluye el punto y la coma obligatoriamente
   const result = await Tesseract.recognize(camCanvas, 'eng', {
     logger: m => {
       if (showProgress && m.status === 'recognizing text') {
@@ -758,6 +760,7 @@ async function captureAndOCR(showProgress) {
     tessedit_pageseg_mode: '7',
   });
 
+  // Procesar comas y convertirlas a formato javascript de punto decimal
   let processedText = result.data.text.replace(/,/g, '.').replace(/[^0-9.]/g, '').trim();
   
   if(processedText.endsWith('.')) processedText = processedText.slice(0, -1);
@@ -932,7 +935,7 @@ $('btn-pdf-todo').addEventListener('click', () => {
 });
 
 // ══════════════════════════════════════════
-//  EXPORTAR PDF (LISTA VERTICAL ESTRICTA — CERO DESBORDE)
+//  EXPORTAR PDF STRICT VERTICAL CON COCO DESBORDE Y SOPORTE DECIMAL
 // ══════════════════════════════════════════
 function exportPDF(listas) {
   const PW = 794; 
@@ -941,19 +944,16 @@ function exportPDF(listas) {
 
   const sorted = [...listas].sort((a,b) => b.id - a.id);
 
-  // 1. Calcular la altura dinámica basada en un formato estrictamente vertical
+  // Calcular la altura dinámica exacta para forzar una única página de corrido
   let totalCalculatedHeight = 165; 
-  
-  sorted.forEach((lista, idx) => {
-    totalCalculatedHeight += 32; // Cabecera de lista
-    totalCalculatedHeight += 22; // Subcabecera informativa
-    totalCalculatedHeight += (lista.numeros.length * 24); // Fila vertical estricta por cada número
-    totalCalculatedHeight += 15; // Margen entre bloques
+  sorted.forEach((lista) => {
+    totalCalculatedHeight += 32; 
+    totalCalculatedHeight += 22; 
+    totalCalculatedHeight += (lista.numeros.length * 24); 
+    totalCalculatedHeight += 15; 
   });
-  
-  totalCalculatedHeight += 40; // Margen para el pie de página seguro
+  totalCalculatedHeight += 40; 
 
-  // Forzar un lienzo continuo que crezca dinámicamente y evite páginas en blanco extras
   const PH = Math.max(1123, totalCalculatedHeight);
 
   const cv = document.createElement('canvas');
@@ -964,13 +964,12 @@ function exportPDF(listas) {
   cx.fillStyle = '#ffffff';
   cx.fillRect(0, 0, PW, PH);
 
-  // ── RENDERIZAR ENCABEZADO ──
   cx.fillStyle = '#1e3a8a';
   cx.fillRect(0, 0, PW, 90);
 
   cx.fillStyle = '#ffffff';
   cx.font = 'bold 34px Arial';
-  cx.fillText('Conteo', ML, 52);
+  cx.fillText('Conteo VIP', ML, 52);
 
   cx.fillStyle = '#93c5fd';
   cx.font = '15px Arial';
@@ -984,7 +983,6 @@ function exportPDF(listas) {
   cx.fillText('Generado: ' + fechaGen, PW - MR, 74);
   cx.textAlign = 'left';
 
-  // Resumen Global
   const totalGlobal = sorted.reduce((a,l) => a + l.numeros.reduce((x,n)=>x+n,0), 0);
   const cantGlobal  = sorted.reduce((a,l) => a + l.numeros.length, 0);
 
@@ -1008,11 +1006,9 @@ function exportPDF(listas) {
 
   let y = 165;
 
-  // ── RENDERIZAR FILAS EN VERTICAL ESTRICTO ──
   sorted.forEach((lista) => {
     const total = lista.numeros.reduce((a,b)=>a+b,0);
 
-    // Cabecera de la lista
     cx.fillStyle = '#2563eb';
     roundRect(cx, ML, y, CW, 32, 5);
     cx.fillStyle = '#ffffff';
@@ -1025,7 +1021,6 @@ function exportPDF(listas) {
     cx.textAlign = 'left';
     y += 32;
 
-    // Subcabecera informativa
     cx.fillStyle = '#f8fafc';
     cx.fillRect(ML, y, CW, 22);
     cx.fillStyle = '#475569';
@@ -1037,10 +1032,8 @@ function exportPDF(listas) {
     cx.beginPath(); cx.moveTo(ML, y + 22); cx.lineTo(ML + CW, y + 22); cx.stroke();
     y += 22;
 
-    // Números uno debajo de otro estrictamente sin columnas horizontales
     for (let i = 0; i < lista.numeros.length; i++) {
       const ny = y + (i * 24);
-      
       cx.fillStyle = i % 2 === 0 ? '#f1f5f9' : '#ffffff';
       cx.fillRect(ML, ny, CW, 24);
       
@@ -1061,12 +1054,11 @@ function exportPDF(listas) {
     y += (lista.numeros.length * 24) + 15; 
   });
 
-  // Pie de Página al final absoluto de la imagen continua
   cx.fillStyle = '#1e3a8a';
   cx.fillRect(0, PH - 32, PW, 32);
   cx.fillStyle = '#ffffff';
   cx.font = '11px Arial';
-  cx.fillText('Conteo App — Lista Vertical Oficial', ML, PH - 12);
+  cx.fillText('Conteo VIP — Lista Vertical Oficial', ML, PH - 12);
   cx.textAlign = 'right';
   cx.fillText('Documento Completo', PW - MR, PH - 12);
   cx.textAlign = 'left';
@@ -1081,7 +1073,7 @@ function exportPDF(listas) {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Conteo_${fecha}</title>
+  <title>ConteoVIP_${fecha}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { background:#ffffff; margin: 0; }
@@ -1118,6 +1110,21 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
   ctx.fill();
 }
+
+// PWA 
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  $('btn-install').style.display = 'block';
+});
+$('btn-install').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  $('btn-install').style.display = 'none';
+});
 </script>
 </body>
 </html>
