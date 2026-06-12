@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="ConteoVIP">
+  <meta name="apple-mobile-web-app-title" content="Conteo">
   <meta name="theme-color" content="#1e3a8a">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Conteo VIP</title>
+  <title>Conteo</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
 
   <style>
@@ -118,7 +118,6 @@
     }
     input:focus { border-color: var(--blue-light); }
 
-    /* Fila número + botón cámara */
     .num-row {
       display: flex;
       gap: 8px;
@@ -314,7 +313,6 @@
     .corner.br { bottom: -2px; right: -2px; border-bottom: 3px solid #60a5fa; border-right: 3px solid #60a5fa; border-radius: 0 0 4px 0; }
     #cam-hint { position: absolute; bottom: 8px; left: 0; right: 0; text-align: center; font-size: .72rem; color: rgba(255,255,255,.65); }
 
-    /* Línea de escaneo animada */
     .scan-line {
       position: absolute;
       left: 5%; right: 5%;
@@ -332,7 +330,6 @@
     }
     .scan-line.active { display: block; }
 
-    /* Flash de éxito */
     .success-flash {
       position: absolute;
       inset: 0;
@@ -346,7 +343,6 @@
 
     #cam-canvas { display: none; }
 
-    /* Toggle modo */
     .cam-mode-toggle {
       display: flex;
       background: #0a1628;
@@ -403,20 +399,15 @@
       display: none;
     }
 
-    /* Contador en modo escáner */
     #scan-counter {
       text-align: center; margin-top: 8px;
       font-size: .8rem; color: #34d399; font-weight: 700;
       display: none;
     }
 
-    /* ── Filtro historial ── */
     .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-
-    /* ── Empty state ── */
     .empty { color: var(--muted); font-size: .85rem; text-align: center; padding: 20px 0; }
 
-    /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -426,7 +417,7 @@
 
 <header>
   <div>
-    <h1>Conteo VIP</h1>
+    <h1>Conteo</h1>
     <span id="header-date"></span>
   </div>
   <button id="btn-install">⬇ Instalar</button>
@@ -438,7 +429,6 @@
 </div>
 
 <div class="section active" id="tab-registrar">
-
   <div class="totals">
     <div class="total-box">
       <div class="total-label">Total Acumulado</div>
@@ -452,7 +442,6 @@
 
   <div class="card">
     <div class="card-title">Nueva entrada</div>
-
     <label>Fecha de Lista</label>
     <input type="date" id="input-fecha">
 
@@ -464,7 +453,6 @@
       <input type="number" id="input-numero" placeholder="0" min="0">
       <button class="btn-camera" id="btn-open-cam" title="Leer con cámara">📷</button>
     </div>
-
     <button class="btn btn-blue" id="btn-add">+ Añadir</button>
   </div>
 
@@ -473,11 +461,9 @@
     <ul id="num-list"><li class="empty">Agrega números para comenzar.</li></ul>
     <button class="btn btn-green" id="btn-save" style="margin-top:12px">💾 Guardar esta Lista</button>
   </div>
-
 </div>
 
 <div class="section" id="tab-historial">
-
   <div class="card">
     <div class="card-title">Historial por Rango de Fechas</div>
     <div class="date-row">
@@ -494,15 +480,12 @@
     <button class="btn btn-gray"  id="btn-ver-todo" style="margin-top:8px">Ver Todo</button>
     <button class="btn" id="btn-pdf-todo" style="margin-top:8px">📄 Exportar todo a PDF</button>
   </div>
-
   <div id="hist-container"><p class="empty">No hay listas guardadas aún.</p></div>
-
 </div>
 
 <div class="modal-overlay" id="cam-modal">
   <div class="cam-sheet">
     <div class="cam-handle"></div>
-
     <div id="video-wrap">
       <video id="cam-video" autoplay playsinline muted></video>
       <div class="focus-frame">
@@ -540,17 +523,11 @@
 </div>
 
 <script>
-// ══════════════════════════════════════════
-//  ESTADO
-// ══════════════════════════════════════════
 let currentList  = [];          
 let savedLists   = JSON.parse(localStorage.getItem('conteoVIP_listas') || '[]');
 let camStream    = null;
 let lastDetected = null;
 
-// ══════════════════════════════════════════
-//  UTILIDADES
-// ══════════════════════════════════════════
 const $ = id => document.getElementById(id);
 
 function formatDate(d) {
@@ -563,15 +540,9 @@ function today() {
   return new Date().toISOString().slice(0,10);
 }
 
-// ══════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════
 $('input-fecha').value = today();
 $('header-date').textContent = formatDate(today());
 
-// ══════════════════════════════════════════
-//  TABS
-// ══════════════════════════════════════════
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -582,9 +553,6 @@ document.querySelectorAll('.tab').forEach(tab => {
   });
 });
 
-// ══════════════════════════════════════════
-//  REGISTRAR
-// ══════════════════════════════════════════
 function updateTotals() {
   const total = currentList.reduce((a,b) => a + b, 0);
   $('display-total').textContent = total.toLocaleString('es');
@@ -638,9 +606,6 @@ $('btn-save').addEventListener('click', () => {
   alert(`✅ Lista "${nombre}" guardada.`);
 });
 
-// ══════════════════════════════════════════
-//  HISTORIAL
-// ══════════════════════════════════════════
 function renderHistorial(listas) {
   const cont = $('hist-container');
   if (!listas.length) {
@@ -714,9 +679,7 @@ $('btn-ver-todo').addEventListener('click', () => {
   renderHistorial(savedLists);
 });
 
-// ══════════════════════════════════════════
-//  CÁMARA OCR
-// ══════════════════════════════════════════
+// ═══ CÁMARA OCR ═══
 const camModal  = $('cam-modal');
 const camVideo  = $('cam-video');
 const camCanvas = $('cam-canvas');
@@ -930,22 +893,13 @@ async function runScanLoop() {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-$('mode-manual').addEventListener('click', () => {
-  if (!scannerMode) return;
-  setScannerMode(false);
-});
-$('mode-scanner').addEventListener('click', () => {
-  if (scannerMode) return;
-  if (!camStream) return;
-  setScannerMode(true);
-});
+$('mode-manual').addEventListener('click', () => { if (scannerMode) setScannerMode(false); });
+$('mode-scanner').addEventListener('click', () => { if (!scannerMode && camStream) setScannerMode(true); });
 
 $('btn-open-cam').addEventListener('click', openCam);
 $('cam-btn-close').addEventListener('click', closeCam);
 
-camModal.addEventListener('click', e => {
-  if (e.target === camModal) closeCam();
-});
+camModal.addEventListener('click', e => { if (e.target === camModal) closeCam(); });
 
 $('btn-pdf-todo').addEventListener('click', () => {
   const desde = $('hist-desde').value;
@@ -963,39 +917,32 @@ $('btn-pdf-todo').addEventListener('click', () => {
 });
 
 // ══════════════════════════════════════════
-//  EXPORTAR PDF  (LISTA VERTICAL PURA EN UNA SOLA PÁGINA)
+//  EXPORTAR PDF (LISTA VERTICAL ESTRICTA — NOMBRE: CONTEO)
 // ══════════════════════════════════════════
 function exportPDF(listas) {
-  const PW = 794, PH = 1123; 
-  const ML = 40, MR = 40;
+  const PW = 794, PH = 1123; // Medidas A4 estándar a 96dpi
+  const ML = 45, MR = 45;
   const CW = PW - ML - MR;
-  const PAGE_BOTTOM = PH - 35; 
+  const PAGE_BOTTOM = PH - 50; 
 
   const sorted = [...listas].sort((a,b) => b.id - a.id);
 
-  // Calcula la altura dinámica exacta para filas verticales apiladas una debajo de otra
-  function listHeight(lista) {
-    const itemRows = lista.numeros.length;
-    return 32 + 22 + (itemRows * 26); 
+  function getListaBlockHeight(lista) {
+    return 32 + 22 + (lista.numeros.length * 24) + 15; 
   }
-  
-  const HEADER_H = 145; 
-  const FOOTER_H = 30;
 
-  // Organizar páginas compactas
   const pages = [[]];
-  let usedY = HEADER_H;
-  
-  sorted.forEach((lista, index) => {
-    let h = listHeight(lista);
-    if (index < sorted.length - 1) h += 15; 
+  let currentY = 160; 
 
-    if (usedY + h > PAGE_BOTTOM - FOOTER_H && pages[pages.length-1].length > 0) {
+  sorted.forEach(lista => {
+    const blockH = getListaBlockHeight(lista);
+    
+    if (currentY + blockH > PAGE_BOTTOM && pages[pages.length - 1].length > 0) {
       pages.push([]);
-      usedY = 50; 
+      currentY = 60; 
     }
-    pages[pages.length-1].push(lista);
-    usedY += h;
+    pages[pages.length - 1].push(lista);
+    currentY += blockH;
   });
 
   const totalPages = pages.length;
@@ -1011,90 +958,99 @@ function exportPDF(listas) {
     cx.fillStyle = '#ffffff';
     cx.fillRect(0, 0, PW, PH);
 
-    // ── HEADER ──
+    let y = 0;
+
+    // ── RENDERIZAR ENCABEZADOS DE HOJA ──
     if (pageIdx === 0) {
+      // Banner Principal Azul
       cx.fillStyle = '#1e3a8a';
-      cx.fillRect(0, 0, PW, 85);
+      cx.fillRect(0, 0, PW, 90);
 
       cx.fillStyle = '#ffffff';
-      cx.font = 'bold 32px Arial';
-      cx.fillText('Conteo VIP', ML, 48);
+      cx.font = 'bold 34px Arial';
+      cx.fillText('Conteo', ML, 52);
 
       cx.fillStyle = '#93c5fd';
-      cx.font = '14px Arial';
-      cx.fillText('Reporte de Historial (Lista Vertical)', ML, 68);
+      cx.font = '15px Arial';
+      cx.fillText('Reporte de Historial (Lista Vertical)', ML, 74);
 
       const now = new Date();
       const fechaGen = now.toLocaleDateString('es', { day:'2-digit', month:'long', year:'numeric' });
       cx.fillStyle = '#bfdbfe';
-      cx.font = '12px Arial';
+      cx.font = '13px Arial';
       cx.textAlign = 'right';
-      cx.fillText('Generado: ' + fechaGen, PW - MR, 68);
+      cx.fillText('Generado: ' + fechaGen, PW - MR, 74);
       cx.textAlign = 'left';
 
+      // Cajas de Totales Globales
       const totalGlobal = sorted.reduce((a,l) => a + l.numeros.reduce((x,n)=>x+n,0), 0);
       const cantGlobal  = sorted.reduce((a,l) => a + l.numeros.length, 0);
 
-      // Resumen acumulado
+      // Card Izquierda (Total Acumulado)
       cx.fillStyle = '#1e40af';
-      roundRect(cx, ML, 96, CW/2 - 8, 40, 6);
+      roundRect(cx, ML, 102, CW/2 - 8, 44, 6);
       cx.fillStyle = '#93c5fd';
       cx.font = '10px Arial';
-      cx.fillText('TOTAL ACUMULADO', ML + 10, 112);
+      cx.fillText('TOTAL ACUMULADO', ML + 12, 118);
       cx.fillStyle = '#ffffff';
-      cx.font = 'bold 18px Arial';
-      cx.fillText(totalGlobal.toLocaleString('es'), ML + 10, 130);
+      cx.font = 'bold 20px Arial';
+      cx.fillText(totalGlobal.toLocaleString('es'), ML + 12, 138);
 
-      // Resumen cantidad
+      // Card Derecha (Cantidad de Ítems)
       cx.fillStyle = '#1e40af';
-      roundRect(cx, ML + CW/2 + 8, 96, CW/2 - 8, 40, 6);
+      roundRect(cx, ML + CW/2 + 8, 102, CW/2 - 8, 44, 6);
       cx.fillStyle = '#93c5fd';
       cx.font = '10px Arial';
-      cx.fillText('CANTIDAD DE NÚMEROS', ML + CW/2 + 18, 112);
+      cx.fillText('CANTIDAD DE NÚMEROS', ML + CW/2 + 20, 118);
       cx.fillStyle = '#ffffff';
-      cx.font = 'bold 18px Arial';
-      cx.fillText(cantGlobal.toString(), ML + CW/2 + 18, 130);
+      cx.font = 'bold 20px Arial';
+      cx.fillText(cantGlobal.toLocaleString('es'), ML + CW/2 + 20, 138);
 
-      var y = 155;
+      y = 165;
     } else {
+      // Mini Cabecera para páginas de continuación
       cx.fillStyle = '#1e3a8a';
-      cx.fillRect(0, 0, PW, 34);
-      cx.fillStyle = '#ffffff';
-      cx.font = '13px Arial';
-      cx.fillText('Conteo VIP – Historial', ML, 22);
-      var y = 50;
-    }
-
-    // ── RENDERIZADO VERTICAL DE LISTAS ──
-    pageListas.forEach((lista, idx) => {
-      const total = lista.numeros.reduce((a,b)=>a+b,0);
-
-      // Cabecera lista
-      cx.fillStyle = '#2563eb';
-      roundRect(cx, ML, y, CW, 32, 6);
+      cx.fillRect(0, 0, PW, 40);
       cx.fillStyle = '#ffffff';
       cx.font = 'bold 14px Arial';
-      cx.fillText(lista.nombre, ML + 10, y + 20);
+      cx.fillText('Conteo – Continuación de Lista', ML, 25);
+      y = 60;
+    }
+
+    // ── RENDERIZAR FILAS EN VERTICAL ESTRICTO ──
+    pageListas.forEach((lista) => {
+      const total = lista.numeros.reduce((a,b)=>a+b,0);
+
+      // Cabecera Azul de la Lista
+      cx.fillStyle = '#2563eb';
+      roundRect(cx, ML, y, CW, 32, 5);
+      cx.fillStyle = '#ffffff';
+      cx.font = 'bold 14px Arial';
+      cx.fillText(lista.nombre, ML + 12, y + 21);
       cx.fillStyle = '#bfdbfe';
       cx.font = '12px Arial';
       cx.textAlign = 'right';
-      cx.fillText(formatDate(lista.fecha), PW - MR - 6, y + 20);
+      cx.fillText(formatDate(lista.fecha), PW - MR - 12, y + 21);
       cx.textAlign = 'left';
       y += 32;
 
-      // Subcabecera totales
-      cx.fillStyle = '#f1f5f9';
+      // Subcabecera informativa
+      cx.fillStyle = '#f8fafc';
       cx.fillRect(ML, y, CW, 22);
-      cx.fillStyle = '#64748b';
-      cx.font = '11px Arial';
-      cx.fillText(`Total: ${total.toLocaleString('es')}   ·   Cantidad: ${lista.numeros.length}`, ML + 8, y + 15);
+      cx.fillStyle = '#475569';
+      cx.font = '12px Arial';
+      cx.fillText(`Suma total de la lista: ${total.toLocaleString('es')}   ·   Cantidad: ${lista.numeros.length}`, ML + 12, y + 15);
+      
+      cx.strokeStyle = '#cbd5e1';
+      cx.lineWidth = 1;
+      cx.beginPath(); cx.moveTo(ML, y + 22); cx.lineTo(ML + CW, y + 22); cx.stroke();
       y += 22;
 
-      // Filas completas: un número debajo de otro
+      // Renderizar números en lista secuencial uno debajo de otro
       for (let i = 0; i < lista.numeros.length; i++) {
-        const ny = y + (i * 26);
+        const ny = y + (i * 24);
         
-        cx.fillStyle = i % 2 === 0 ? '#f8fafc' : '#f1f5f9';
+        cx.fillStyle = i % 2 === 0 ? '#f1f5f9' : '#ffffff';
         cx.fillRect(ML, ny, CW, 24);
         
         cx.strokeStyle = '#e2e8f0';
@@ -1103,40 +1059,30 @@ function exportPDF(listas) {
 
         cx.fillStyle = '#64748b';
         cx.font = 'bold 12px Arial';
-        cx.fillText(`#${i + 1}`, ML + 14, ny + 16);
+        cx.fillText(`#${i + 1}`, ML + 16, ny + 16);
 
         cx.fillStyle = '#0f172a';
-        cx.font = '14px Arial';
+        cx.font = 'bold 14px Arial';
         cx.textAlign = 'right';
-        cx.fillText(lista.numeros[i].toLocaleString('es'), ML + CW - 18, ny + 16);
+        cx.fillText(lista.numeros[i].toLocaleString('es'), ML + CW - 16, ny + 16);
         cx.textAlign = 'left';
       }
-      y += lista.numeros.length * 26;
-
-      if (idx < pageListas.length - 1) {
-        cx.strokeStyle = '#cbd5e1';
-        cx.lineWidth = 1;
-        cx.beginPath();
-        cx.moveTo(ML, y + 6);
-        cx.lineTo(ML + CW, y + 6);
-        cx.stroke();
-        y += 14;
-      }
+      y += (lista.numeros.length * 24) + 15; 
     });
 
-    // ── FOOTER SEGURO ──
+    // ── PIE DE HOJA FIJO ──
     cx.fillStyle = '#1e3a8a';
-    cx.fillRect(0, PH - 26, PW, 26);
+    cx.fillRect(0, PH - 32, PW, 32);
     cx.fillStyle = '#ffffff';
     cx.font = '11px Arial';
-    cx.fillText('Conteo VIP', ML, PH - 9);
+    cx.fillText('Conteo App — Lista Vertical Oficial', ML, PH - 12);
     cx.textAlign = 'right';
-    cx.fillText(`Pág. ${pageIdx + 1} / ${totalPages}`, PW - MR, PH - 9);
+    cx.fillText(`Página ${pageIdx + 1} de ${totalPages}`, PW - MR, PH - 12);
     cx.textAlign = 'left';
   });
 
   const win = window.open('', '_blank');
-  if (!win) { alert('Activa las ventanas emergentes para generar el PDF.'); return; }
+  if (!win) { alert('Activa las ventanas emergentes en tu navegador.'); return; }
 
   const imgs = canvases.map(cv => cv.toDataURL('image/jpeg', 0.95));
   const fecha = new Date().toISOString().slice(0,10);
@@ -1145,61 +1091,27 @@ function exportPDF(listas) {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>ConteoVIP_${fecha}</title>
+  <title>Conteo_${fecha}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#475569; font-family:system-ui, sans-serif; padding-top: 60px; }
-    
-    /* Toolbar Superior Fija */
-    .toolbar {
-      position: fixed; top: 0; left: 0; right: 0; height: 60px;
-      background: #0f172a; display: flex; align-items: center;
-      justify-content: space-between; padding: 0 24px; z-index: 9999;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    }
-    .toolbar-title { color: #fff; font-size: 1rem; font-weight: 700; }
-    .toolbar-actions { display: flex; gap: 12px; }
-    .btn-action {
-      padding: 8px 16px; border: none; border-radius: 6px;
-      font-size: 0.85rem; font-weight: 700; cursor: pointer;
-      transition: opacity 0.15s; text-decoration: none; display: inline-flex; align-items: center;
-    }
-    .btn-print { background: #22c55e; color: #fff; }
-    .btn-close { background: #ef4444; color: #fff; }
-    .btn-action:hover { opacity: 0.9; }
-
-    .pdf-container { display: flex; flex-direction: column; align-items: center; padding: 20px 0; gap: 20px; }
-    .page { 
-      background:#fff; width: 794px; height: 1123px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: block;
-      page-break-after:always; 
-    }
-    .page:last-child { page-break-after:avoid; }
+    body { background:#fafafa; display: flex; flex-direction: column; align-items: center; }
+    .page { display:block; width:100%; max-width: 794px; background: #fff; page-break-after:always; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 10px; }
+    .page:last-child { page-break-after:avoid; margin-bottom: 0; }
     img { width:100%; display:block; }
-    
     @media print {
-      .toolbar { display: none !important; }
-      body { background: #fff; padding-top: 0; }
-      .pdf-container { padding: 0; gap: 0; }
-      .page { box-shadow: none; width: 100%; height: auto; }
+      body { background: transparent; }
+      .page { box-shadow: none; margin-bottom: 0; }
       @page { size:A4; margin:0; }
     }
   </style>
 </head>
 <body>
-
-  <div class="toolbar">
-    <div class="toolbar-title">📄 Vista Previa de Reporte (Lista Vertical)</div>
-    <div class="toolbar-actions">
-      <button class="btn-action btn-print" onclick="window.print()">🖨 Imprimir / Guardar</button>
-      <button class="btn-action btn-close" onclick="window.close()">✕ Salir</button>
-    </div>
-  </div>
-
-  <div class="pdf-container">
-    ${imgs.map(src => `<div class="page"><img src="${src}"></div>`).join('\n')}
-  </div>
-
+${imgs.map(src => `<div class=\"page\"><img src=\"${src}\"></div>`).join('\n')}
+<script>
+  window.onload = function() {
+    setTimeout(function(){ window.print(); }, 350);
+  };
+<\/script>
 </body></html>`);
   win.document.close();
 }
@@ -1219,9 +1131,7 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.fill();
 }
 
-// ══════════════════════════════════════════
-//  PWA – INSTALAR
-// ══════════════════════════════════════════
+// ═══ PWA ═══
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
