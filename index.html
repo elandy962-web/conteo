@@ -302,7 +302,7 @@
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 58%; height: 28%;
+      width: 90%; height: 45%;
       border: 2px solid var(--blue-light);
       border-radius: 8px;
       pointer-events: none;
@@ -317,18 +317,18 @@
     /* Línea de escaneo animada */
     .scan-line {
       position: absolute;
-      left: 21%; right: 21%;
+      left: 5%; right: 5%;
       height: 2px;
       background: linear-gradient(90deg, transparent, #34d399, transparent);
       box-shadow: 0 0 8px #34d399;
-      top: 36%;
+      top: 27%;
       display: none;
       animation: scanMove 1.5s ease-in-out infinite;
     }
     @keyframes scanMove {
-      0%   { top: 36%; opacity: 1; }
-      50%  { top: 56%; opacity: 1; }
-      100% { top: 36%; opacity: 1; }
+      0%   { top: 27%; opacity: 1; }
+      50%  { top: 65%; opacity: 1; }
+      100% { top: 27%; opacity: 1; }
     }
     .scan-line.active { display: block; }
 
@@ -777,7 +777,7 @@ function closeCam() {
 async function captureAndOCR(showProgress) {
   const vw = camVideo.videoWidth  || 640;
   const vh = camVideo.videoHeight || 480;
-  const cw = vw * 0.58, ch = vh * 0.28;
+  const cw = vw * 0.90, ch = vh * 0.45;
   const cx = (vw - cw) / 2, cy = (vh - ch) / 2;
 
   camCanvas.width  = cw;
